@@ -1,0 +1,19 @@
+# Netlify config for the Alex's Farm of Strays site.
+# This site lives at the repository ROOT, so Netlify needs no base directory.
+[build]
+  publish = "."
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  directory    = "Netlify/Functions"
+  node_bundler = "esbuild"
+
+# Friendly headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

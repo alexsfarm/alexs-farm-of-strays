@@ -1,0 +1,12 @@
+{
+  "name": "Alex's Farm of Strays",
+  "short_name": "Alex's Farm",
+  "description": "Animal rescue in Paphos, Cyprus — adopt, foster, donate, and book Paphos Paws Park.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1b6ec2",
+  "icons": [
+    { "src": "assets/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

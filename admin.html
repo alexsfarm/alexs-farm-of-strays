@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Alex's Farm of Strays</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<style>
+  :root{--navy:#16314a;--blue:#1b7fcc;--amber:#f6a623;--amber-deep:#e07c0c;--line:#e7ebf0;--muted:#5f6b78;--soft:#f4f9fd}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,Arial,sans-serif;color:#1b2630;background:#eef4fa}
+  header{background:var(--navy);color:#fff;padding:16px 22px;display:flex;align-items:center;gap:12px}
+  header img{width:40px;height:40px;border-radius:50%}
+  header h1{font-size:1.1rem;margin:0}
+  .wrap{max-width:920px;margin:0 auto;padding:22px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 6px 20px rgba(18,50,90,.06)}
+  h2{color:var(--navy);margin:.2em 0 .6em;font-size:1.2rem}
+  label{display:block;font-weight:700;font-size:.85rem;margin:10px 0 5px;color:var(--navy)}
+  input,select,textarea{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:1rem;font-family:inherit}
+  textarea{min-height:64px;resize:vertical}
+  .btn{border:0;border-radius:999px;padding:11px 22px;font-weight:700;cursor:pointer;font-size:.95rem}
+  .btn-primary{background:linear-gradient(135deg,var(--amber),var(--amber-deep));color:#fff}
+  .btn-blue{background:var(--blue);color:#fff}
+  .btn-light{background:#fff;border:1.5px solid var(--line);color:var(--navy)}
+  .btn-danger{background:#e2483a;color:#fff;padding:7px 14px;font-size:.85rem}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .tabs{display:flex;gap:8px;margin-bottom:16px}
+  .tabs button{flex:0 0 auto}
+  .tabs .on{background:var(--navy);color:#fff}
+  table{width:100%;border-collapse:collapse;font-size:.92rem}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.75rem;font-weight:700;background:var(--soft);color:var(--navy)}
+  .muted{color:var(--muted);font-size:.85rem}
+  .hide{display:none}
+  .note{background:#fff7e0;border:1px solid #ffe08a;border-radius:10px;padding:12px;font-size:.85rem;color:#7a5b00;margin-bottom:16px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <img src="assets/logo.svg" alt="">
+  <h1>Alex's Farm — Admin</h1>
+</header>
+
+<div class="wrap">
+
+  <!-- Login -->
+  <div class="card" id="loginCard">
+    <h2>Sign in</h2>
+    <p class="muted">Enter the admin password (set up during the database step — see SETUP-GUIDE.md).</p>
+    <label for="pw">Password</label>
+    <input type="password" id="pw" placeholder="••••••••">
+    <p style="margin-top:14px"><button class="btn btn-primary" onclick="unlock()">Unlock</button></p>
+    <p id="loginErr" class="muted" style="color:#c0392b"></p>
+  </div>
+
+  <div id="app" class="hide">
+    <div class="note">This page needs Supabase set up. If you only filled in <b>config.js</b>, you don't need this page — you can edit animals there instead.</div>
+
+    <div class="tabs">
+      <button class="btn btn-light on" id="tab-animals" onclick="showTab('animals')">Animals</button>
+      <button class="btn btn-light" id="tab-bookings" onclick="showTab('bookings')">Bookings</button>
+      <button class="btn btn-light" style="margin-left:auto" onclick="signOut()">Sign out</button>
+    </div>
+
+    <!-- Animals -->
+    <div id="panel-animals">
+      <div class="card">
+        <h2>Add an animal</h2>
+        <div class="grid2">
+          <div><label>Name</label><input id="a-name" placeholder="e.g. Scooby"></div>
+          <div><label>Type</label><select id="a-species"><option>Dog</option><option>Cat</option><option>Rabbit</option><option>Bird</option><option>Other</option></select></div>
+        </div>
+        <label>Photo URL (optional)</label>
+        <input id="a-photo" placeholder="e.g. assets/animals/orion.jpg or a full https:// link">
+        <label>Short description</label>
+        <textarea id="a-blurb" placeholder="One or two friendly sentences."></textarea>
+        <label>Details (one bullet per line, optional)</label>
+        <textarea id="a-details" placeholder="Male German Shepherd, approx. 4 years old&#10;Good with people and dogs"></textarea>
+        <div class="grid2">
+          <div><label>Sort order (lower = first)</label><input id="a-sort" type="number" value="0"></div>
+          <div><label>Status</label><select id="a-status"><option value="available">available</option><option value="rehomed">re-homed</option><option value="hidden">hidden</option></select></div>
+        </div>
+        <p style="margin-top:14px"><button class="btn btn-primary" onclick="addAnimal()">Add animal</button></p>
+      </div>
+      <div class="card">
+        <h2>Current animals</h2>
+        <div id="animalsList"><p class="muted">Loading…</p></div>
+      </div>
+    </div>
+
+    <!-- Bookings -->
+    <div id="panel-bookings" class="hide">
+      <div class="card">
+        <h2>Dog-park bookings</h2>
+        <div id="bookingsList"><p class="muted">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let PW = sessionStorage.getItem('af_admin_pw') || '';
+
+  async function api(action, payload){
+    const res = await fetch('/api/admin', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-password':PW},
+      body: JSON.stringify(Object.assign({action}, payload||{}))
+    });
+    if(res.status===401){ throw new Error('unauthorized'); }
+    return res.json();
+  }
+
+  function unlock(){
+    PW = document.getElementById('pw').value;
+    sessionStorage.setItem('af_admin_pw', PW);
+    api('list-animals').then(()=>{ enterApp(); }).catch(()=>{
+      document.getElementById('loginErr').textContent = 'Wrong password, or Supabase isn\'t set up yet.';
+    });
+  }
+  function signOut(){ sessionStorage.removeItem('af_admin_pw'); location.reload(); }
+
+  function enterApp(){
+    document.getElementById('loginCard').classList.add('hide');
+    document.getElementById('app').classList.remove('hide');
+    loadAnimals(); loadBookings();
+  }
+
+  function showTab(t){
+    document.getElementById('panel-animals').classList.toggle('hide', t!=='animals');
+    document.getElementById('panel-bookings').classList.toggle('hide', t!=='bookings');
+    document.getElementById('tab-animals').classList.toggle('on', t==='animals');
+    document.getElementById('tab-bookings').classList.toggle('on', t==='bookings');
+  }
+
+  async function loadAnimals(){
+    const list = document.getElementById('animalsList');
+    try{
+      const rows = await api('list-animals');
+      if(!Array.isArray(rows) || !rows.length){ list.innerHTML='<p class="muted">No animals yet — add one above.</p>'; return; }
+      list.innerHTML = '<table><tr><th>Name</th><th>Type</th><th>Status</th><th></th></tr>' +
+        rows.map(r=>`<tr>
+          <td><b>${esc(r.name)}</b><div class="muted">${esc((r.blurb||'').slice(0,60))}</div></td>
+          <td>${esc(r.species)}</td>
+          <td><span class="pill">${esc(r.status)}</span></td>
+          <td style="text-align:right"><button class="btn btn-danger" onclick="delAnimal('${r.id}')">Delete</button></td>
+        </tr>`).join('') + '</table>';
+    }catch(e){ list.innerHTML='<p class="muted">Could not load.</p>'; }
+  }
+
+  async function addAnimal(){
+    const animal = {
+      name: document.getElementById('a-name').value.trim(),
+      species: document.getElementById('a-species').value,
+      photo_url: document.getElementById('a-photo').value.trim() || null,
+      blurb: document.getElementById('a-blurb').value.trim(),
+      details: document.getElementById('a-details').value.split('\n').map(s=>s.trim()).filter(Boolean),
+      sort: parseInt(document.getElementById('a-sort').value,10) || 0,
+      status: document.getElementById('a-status').value
+    };
+    if(!animal.name){ alert('Please enter a name.'); return; }
+    await api('add-animal', {animal});
+    document.getElementById('a-name').value=''; document.getElementById('a-photo').value=''; document.getElementById('a-blurb').value=''; document.getElementById('a-details').value='';
+    loadAnimals();
+  }
+
+  async function delAnimal(id){
+    if(!confirm('Delete this animal?')) return;
+    await api('delete-animal', {id});
+    loadAnimals();
+  }
+
+  async function loadBookings(){
+    const list = document.getElementById('bookingsList');
+    try{
+      const rows = await api('list-bookings');
+      if(!Array.isArray(rows) || !rows.length){ list.innerHTML='<p class="muted">No bookings yet.</p>'; return; }
+      list.innerHTML = '<table><tr><th>Date</th><th>Slot</th><th>Name</th><th>Phone</th><th>Dogs</th><th>Paid</th><th>Status</th></tr>' +
+        rows.map(r=>`<tr>
+          <td>${esc(r.date)}</td><td>${esc(r.slot)}</td><td>${esc(r.name)}</td>
+          <td>${esc(r.phone)}</td><td>${esc(r.dogs)}</td>
+          <td>${r.amount!=null?esc((r.currency||'').toUpperCase()+' '+r.amount):''}</td>
+          <td><span class="pill">${esc(r.status)}</span></td>
+        </tr>`).join('') + '</table>';
+    }catch(e){ list.innerHTML='<p class="muted">Could not load.</p>'; }
+  }
+
+  // auto sign-in if we already have a stored password
+  if(PW){ api('list-animals').then(()=>enterApp()).catch(()=>{}); }
+</script>
+</body>
+</html>
