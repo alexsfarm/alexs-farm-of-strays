@@ -53,7 +53,7 @@
   .health{font-size:.85rem}
   .health b{color:var(--ok)}
 </style>
-<script type='text/javascript' src='https://api.netlify.com/b_HtIojrTahlmOYnOBpAzlYeC7PLzWXvkXNJ-YOAQwZraomJJf8O0ZSJWWr0--NZEzVl8ptvKV7RaRM_MeAHa1mEyn-8d3Kf0qHqqtL2z10UlRFDZ0rqLCgoylRhzVUN8sHJTHJNfnLzunzy5mwyz1l04U8pL9y1SLqhFLjPI2fg3XjHmYS60vy3oZPfww5XyniWT_n2dgqmzaB9SvrfJ1XvJWOgRQe1u90p-Zkqy3Z06iX6_OKy_SMsvdIcCBb9QOxwTR4jBkwi_8D2D37IYeZDx2pcG_nZ5YP7yw709M9Lc7bbUqJ_1T1pQjvH-ZwMF_aqTIz46QlLgl1SyzgvyR2PCG5ewG0EisQ8JYRHDjxHf3K69vFxTIP-ce7CYEF4S_pn9AjIAL4xF3xZOJdd6AL8seLx9B2eFtdHtHcHJMxCmc6ki_nmofevJYTpd8aYVDDGkyuSL16TTQE86YSJwsxQ2UgNSa_r6t5wrhXozTTYMrOx7JiSVG740q6GR86tCbvITXJkYVLAW_dsJCzM'></script></head>
+</head>
 <body>
 <header>
   <img src="assets/logo.svg" alt="">
@@ -88,6 +88,7 @@
   <span class="muted">Animals &amp; bookings save on their own. After saving, refresh your website to see changes.</span>
 </div>
 
+<script src="config.js"></script>
 <script>
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let PW = sessionStorage.getItem('af_admin_pw') || '';
@@ -173,6 +174,13 @@ async function loadAll(){
   S.adoptionSteps = Array.isArray(S.adoptionSteps) ? S.adoptionSteps : [];
   S.helpCards = Array.isArray(S.helpCards) ? S.helpCards : [];
   S.park = S.park || {};
+  // Pre-load the current site content (from config.js) into the editors wherever
+  // nothing is saved yet, so editing one item never blanks out the rest.
+  const C = (window.SITE_CONFIG) || {};
+  if(!S.strapline && C.strapline) S.strapline = C.strapline;
+  if(!S.storyParagraphs.length && Array.isArray(C.storyParagraphs)) S.storyParagraphs = C.storyParagraphs.slice();
+  if(!S.stats.length && Array.isArray(C.stats)) S.stats = C.stats.map(o=>Object.assign({},o));
+  if(!S.adoptionSteps.length && Array.isArray(C.adoptionSteps)) S.adoptionSteps = C.adoptionSteps.map(o=>Object.assign({},o));
   try{ A = await api('list-animals') || []; }catch(e){ A = []; }
   if(!Array.isArray(A)) A = [];
   try{ B = await api('list-bookings') || []; }catch(e){ B = []; }
