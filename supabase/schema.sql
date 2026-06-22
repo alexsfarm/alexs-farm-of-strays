@@ -55,3 +55,38 @@ create policy "public read visible animals"
 -- Bookings contain personal details, so there are deliberately NO public
 -- policies. The website only ever reads/writes bookings through the server-side
 -- Netlify Functions using the service key, which bypasses RLS.
+
+-- Site settings (all editable content + theme) -------------------------------
+-- A single row (id = 'main') holds the whole "settings" object as JSON. The
+-- admin page writes it (server-side, via the service key); the public website
+-- reads it with the anon key and merges it over the defaults in config.js.
+create table if not exists public.site_settings (
+  id          text primary key default 'main',
+  data        jsonb not null default '{}'::jsonb,
+  updated_at  timestamptz not null default now()
+);
+insert into public.site_settings (id, data) values ('main', '{}'::jsonb)
+  on conflict (id) do nothing;
+
+alter table public.site_settings enable row level security;
+
+-- Settings are non-sensitive site content, so anyone may READ them (the public
+-- site loads them with the anon key). Writes only happen via the service key.
+drop policy if exists "public read site settings" on public.site_settings;
+create policy "public read site settings"
+  on public.site_settings for select using (true);
+
+-- Animal photo storage -------------------------------------------------------
+-- The admin page uploads animal photos to a public Storage bucket called
+-- 'animal-photos'. Easiest: create it once in the Supabase dashboard
+--   Storage -> New bucket -> name: animal-photos -> "Public bucket": ON
+-- …or just run the snippet below (it is safe to run more than once).
+insert into storage.buckets (id, name, public)
+  values ('animal-photos', 'animal-photos', true)
+  on conflict (id) do nothing;
+
+drop policy if exists "public read animal photos" on storage.objects;
+create policy "public read animal photos"
+  on storage.objects for select using (bucket_id = 'animal-photos');
+-- (Uploads/deletes go through the admin Netlify function with the service key,
+--  which bypasses RLS, so no public insert/delete policy is needed.)

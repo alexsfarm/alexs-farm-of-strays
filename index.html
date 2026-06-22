@@ -32,10 +32,14 @@
     --shadow-lg:0 24px 70px rgba(18,50,90,.22);
     --max:1100px;
     --ease:cubic-bezier(.22,.61,.36,1);
+    /* editable from the admin Design tab (overridden at runtime) */
+    --font:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --scale:1;
+    --status-available:#1f9d55; --status-rehomed:#5f6b78; --tag-other:#5b3fbf;
   }
   *{box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  html{scroll-behavior:smooth;font-size:calc(100% * var(--scale,1))}
+  body{margin:0;font-family:var(--font,'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif);
        color:var(--ink);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   img{max-width:100%;display:block}
   a{color:var(--blue);text-decoration:none}
@@ -197,11 +201,11 @@
      color:#fff;font-size:.72rem;font-weight:800;letter-spacing:.04em;padding:5px 12px;border-radius:999px;
      box-shadow:0 4px 10px rgba(27,127,204,.35)}
   .tag.cat{background:linear-gradient(135deg,var(--amber),var(--amber-deep));box-shadow:0 4px 10px rgba(224,124,12,.35)}
-  .tag.other{background:linear-gradient(135deg,#7c5cd6,#5b3fbf);box-shadow:0 4px 10px rgba(91,63,191,.32)}
+  .tag.other{background:linear-gradient(135deg,var(--tag-other),var(--tag-other));box-shadow:0 4px 10px rgba(91,63,191,.32)}
   .status-pill{position:absolute;top:12px;right:12px;z-index:3;font-size:.72rem;font-weight:800;letter-spacing:.03em;
      padding:5px 12px;border-radius:999px;box-shadow:0 4px 10px rgba(0,0,0,.18)}
-  .status-pill.available{background:linear-gradient(135deg,#2bbf6a,#1f9d55);color:#fff}
-  .status-pill.rehomed{background:linear-gradient(135deg,#90a0ad,#5f6b78);color:#fff}
+  .status-pill.available{background:var(--status-available);color:#fff}
+  .status-pill.rehomed{background:var(--status-rehomed);color:#fff}
   .photo-ph{position:relative;z-index:1;font-weight:700;color:#6b7c8c}
   .card .body{padding:20px;display:flex;flex-direction:column;gap:8px;flex:1;transform:translateZ(30px)}
   .card h3{margin:0;color:var(--navy)}
@@ -209,6 +213,23 @@
   .card .body .btn{margin-top:auto}
   .card .details{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:.86rem;line-height:1.5}
   .card .details li{margin:3px 0}
+  .card .photo img.zoomable{cursor:zoom-in}
+
+  /* Photo lightbox — click an animal photo to view it full-size */
+  .lightbox{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;
+     background:rgba(8,22,38,.88);backdrop-filter:blur(4px);padding:24px}
+  .lightbox.open{display:flex}
+  .lightbox figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:14px;
+     animation:lbIn .25s var(--ease)}
+  .lightbox img{max-width:min(92vw,1100px);max-height:84vh;width:auto;height:auto;border-radius:14px;
+     object-fit:contain;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+  .lightbox figcaption{color:#fff;font-weight:700;font-size:1.05rem;text-shadow:0 2px 8px rgba(0,0,0,.45)}
+  .lightbox .lb-close{position:absolute;top:16px;right:18px;width:46px;height:46px;border-radius:50%;border:0;
+     background:rgba(255,255,255,.16);color:#fff;font-size:1.6rem;line-height:1;cursor:pointer;
+     display:grid;place-items:center;transition:background .2s var(--ease),transform .2s var(--ease)}
+  .lightbox .lb-close:hover{background:rgba(255,255,255,.32);transform:scale(1.08)}
+  @keyframes lbIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+  @media(prefers-reduced-motion:reduce){.lightbox figure{animation:none}}
 
   .help-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:30px 24px;text-align:center;
      transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
@@ -289,7 +310,7 @@
     .reveal{opacity:1;transform:none}
   }
 </style>
-</head>
+<script type='text/javascript' src='https://api.netlify.com/geg6E20uhgM_hl-fmUTkP-8h-inFaYMWhHnc6W9k9_4Vus-tkmfLGEFYFrxZ9Hh0NRhMAoz118qbSQcmgs5hoH7KCZ-wYs55Usr8MnK76TJEL9hXX1MxNtuk65S5lQOwtvsNl1av67uXLQhZ9VfJrmolOWbHIu_fqmN1qf2bu23cNQ0yALMTMvk0ZFMKAS3nuNRyo-B4joTsYOt1qo4r4jzrPz6GZKovVJRe2pzqoAmU_2fHaANrv5CnKmnvg1KXDW3o-MWp87j36EKrNxWnW8hRSlt3DOQu45S0yY2urZJsH3KgQjji0V01fJvzeAL0rQG1KsEFt9_oWDaJVaO31QZhWVnyrVNCAL3u5VLGdKDp5m4e2b4BTSBuXZfwCrOhkJHUuyLjOrHSt99kkM1UOK4-xQ-U9yT1y_2MoBHkg7nDY0cOjoNlVg1hPx7lNOyI5z7NEjVoKDQIhK8AZGDFy7SvUJmeausA2gc4D3FGJpi5yk0IW__l7kFrB9NbLKTjwCd8pRe36W0_AhGJrAaY'></script></head>
 <body>
 
 <!-- ============ HEADER ============ -->
@@ -297,16 +318,16 @@
   <div class="wrap bar">
     <div class="brand">
       <span class="logo"><img src="assets/logo.svg" alt="Alex's Farm of Strays logo"></span>
-      <span>Alex's Farm of Strays</span>
+      <span data-txt="brand">Alex's Farm of Strays</span>
     </div>
     <button class="menu-btn" aria-label="Menu" onclick="document.getElementById('nav').classList.toggle('open')">☰</button>
     <nav class="navlinks" id="nav">
-      <a href="#story">Our Story</a>
-      <a href="#adopt">Adopt</a>
-      <a href="#help">Help</a>
-      <a href="#park">Dog Park</a>
-      <a href="#donate">Donate</a>
-      <a class="btn btn-primary" href="#park">Book the Park</a>
+      <a href="#story" data-txt="nav.story">Our Story</a>
+      <a href="#adopt" data-txt="nav.adopt">Adopt</a>
+      <a href="#help" data-txt="nav.help">Help</a>
+      <a href="#park" data-txt="nav.park">Dog Park</a>
+      <a href="#donate" data-txt="nav.donate">Donate</a>
+      <a class="btn btn-primary" href="#park" data-txt="nav.book">Book the Park</a>
     </nav>
   </div>
 </header>
@@ -317,15 +338,15 @@
   <div class="paws" id="paws"></div>
   <div class="wrap hero-grid">
     <div>
-      <span class="eyebrow reveal">Registered Animal Rescue · Paphos, Cyprus</span>
-      <h1 class="reveal d1">Every stray deserves a <span class="grad">second chance</span>.</h1>
+      <span class="eyebrow reveal" data-txt="hero.eyebrow">Registered Animal Rescue · Paphos, Cyprus</span>
+      <h1 class="reveal d1" data-txt="hero.title">Every stray deserves a <span class="grad">second chance</span>.</h1>
       <p class="lead reveal d2" id="hero-lead">We're a small, registered rescue working through a network of
         loving foster homes across Paphos. We receive no government funding — every
         adoption, foster, donation and dog-park visit helps us save another life.</p>
       <div class="cta-row reveal d3">
-        <a class="btn btn-primary" href="#adopt">🐶 Meet our animals</a>
-        <a class="btn btn-blue" href="#park">🎾 Book Paphos Paws Park</a>
-        <a class="btn btn-ghost" href="#donate">💛 Donate</a>
+        <a class="btn btn-primary" href="#adopt" data-txt="hero.cta1">🐶 Meet our animals</a>
+        <a class="btn btn-blue" href="#park" data-txt="hero.cta2">🎾 Book Paphos Paws Park</a>
+        <a class="btn btn-ghost" href="#donate" data-txt="hero.cta3">💛 Donate</a>
       </div>
       <div class="stats reveal d4" id="stats-grid"></div>
     </div>
@@ -343,9 +364,9 @@
 <!-- ============ OUR STORY ============ -->
 <section class="section" id="story">
   <div class="wrap">
-    <span class="eyebrow reveal">Who we are</span>
-    <h2 class="reveal d1">Our story</h2>
-    <p class="lead reveal d2" style="margin-bottom:22px">A little about who we are and the work we do.</p>
+    <span class="eyebrow reveal" data-txt="story.eyebrow">Who we are</span>
+    <h2 class="reveal d1" data-txt="story.heading">Our story</h2>
+    <p class="lead reveal d2" style="margin-bottom:22px" data-txt="story.lead">A little about who we are and the work we do.</p>
     <div class="grid reveal d2" id="story-grid" style="grid-template-columns:1fr 1fr;gap:30px"></div>
   </div>
 </section>
@@ -353,45 +374,30 @@
 <!-- ============ ADOPTION ============ -->
 <section class="section cream" id="adopt">
   <div class="wrap">
-    <span class="eyebrow reveal">How adoption works</span>
-    <h2 class="reveal d1">The adoption procedure</h2>
-    <p class="lead reveal d2">A simple, caring process to make sure every animal goes to the right home.</p>
+    <span class="eyebrow reveal" data-txt="adopt.eyebrow">How adoption works</span>
+    <h2 class="reveal d1" data-txt="adopt.heading">The adoption procedure</h2>
+    <p class="lead reveal d2" data-txt="adopt.lead">A simple, caring process to make sure every animal goes to the right home.</p>
     <div class="steps" id="steps-grid"></div>
+    <p class="center reveal" style="margin-top:26px">
+      <a class="btn btn-blue" href="assets/Adoption-Application-Form.docx" download>📄 Download the Adoption Application Form</a>
+    </p>
+    <p class="center reveal note" style="max-width:62ch;margin:8px auto 0">Fill it in and email it back to <a id="adopt-email" href="#">us</a> — or message us and we'll send it over.</p>
 
-    <h2 class="reveal" style="margin-top:64px">Looking for a home</h2>
-    <p class="lead reveal d1" style="margin-bottom:28px">A few of the dogs and cats currently in our care.</p>
+    <h2 class="reveal" style="margin-top:64px" data-txt="animals.heading">Looking for a home</h2>
+    <p class="lead reveal d1" style="margin-bottom:28px" data-txt="animals.lead">A few of the dogs and cats currently in our care.</p>
     <div class="grid cards" id="animals-grid"></div>
     <p class="center reveal" style="margin-top:30px">
-      <a class="btn btn-ghost" href="#contact">See more on our Facebook page</a></p>
+      <a class="btn btn-ghost" href="#contact" data-txt="animals.fbBtn">See more on our Facebook page</a></p>
   </div>
 </section>
 
 <!-- ============ HELP ============ -->
 <section class="section" id="help">
   <div class="wrap">
-    <span class="eyebrow reveal">Get involved</span>
-    <h2 class="reveal d1">How you can help</h2>
-    <p class="lead reveal d2" style="margin-bottom:34px">There's more than one way to make a difference.</p>
-    <div class="grid cards">
-      <div class="help-card reveal d1"><div class="ico">🏡</div><h3>Foster</h3>
-        <p>Open your home to an animal in need until they find their forever family. We cover the essentials — you provide the love.</p>
-        <a class="btn btn-primary" href="#contact">Become a foster</a></div>
-      <div class="help-card reveal d2"><div class="ico">🤝</div><h3>Volunteer</h3>
-        <p>Help with transport, events, fundraising or the dog park. Every pair of hands counts.</p>
-        <a class="btn btn-primary" href="#contact">Volunteer with us</a></div>
-      <div class="help-card reveal d3"><div class="ico">💛</div><h3>Donate</h3>
-        <p>From food to vet bills, donations keep our rescues healthy and safe. Any amount helps.</p>
-        <a class="btn btn-primary" href="#donate">Make a donation</a></div>
-      <div class="help-card reveal d1"><div class="ico">🐕</div><h3>Adopt</h3>
-        <p>The ultimate way to help — give a rescue a loving home and free up space to save another.</p>
-        <a class="btn btn-primary" href="#adopt">Start adopting</a></div>
-      <div class="help-card reveal d2"><div class="ico">📣</div><h3>Share</h3>
-        <p>Follow and share our posts. A single share can be the reason an animal finds their home.</p>
-        <a class="btn btn-primary" href="#contact">Follow us</a></div>
-      <div class="help-card reveal d3"><div class="ico">🎾</div><h3>Visit the park</h3>
-        <p>Book Paphos Paws Park for your dog — a fun day out that directly funds the rescue.</p>
-        <a class="btn btn-primary" href="#park">Book the park</a></div>
-    </div>
+    <span class="eyebrow reveal" data-txt="help.eyebrow">Get involved</span>
+    <h2 class="reveal d1" data-txt="help.heading">How you can help</h2>
+    <p class="lead reveal d2" style="margin-bottom:34px" data-txt="help.lead">There's more than one way to make a difference.</p>
+    <div class="grid cards" id="help-grid"></div>
   </div>
 </section>
 
@@ -400,9 +406,9 @@
 <section class="section park" id="park">
   <div class="blob b1"></div><div class="blob b2"></div>
   <div class="wrap">
-    <span class="eyebrow reveal">Paphos Paws Park</span>
-    <h2 class="reveal d1">A private dog park that gives back</h2>
-    <p class="lead reveal d2">Book a secure, fully-fenced, private session just for you and your
+    <span class="eyebrow reveal" data-txt="park.eyebrow">Paphos Paws Park</span>
+    <h2 class="reveal d1" data-txt="park.heading">A private dog park that gives back</h2>
+    <p class="lead reveal d2" data-txt="park.lead">Book a secure, fully-fenced, private session just for you and your
       dogs — no other dogs, no stress. Every booking supports Alex's Farm of Strays.</p>
     <div class="park-grid">
       <div class="reveal d2">
@@ -414,11 +420,12 @@
 
       <!-- Booking widget -->
       <div class="booking reveal d3">
-        <h3>Book your session 🐾</h3>
+        <h3 data-txt="booking.heading">Book your session 🐾</h3>
         <form id="bookingForm" onsubmit="return submitBooking(event)">
           <div class="field">
             <label for="bk-date">Date</label>
             <input type="date" id="bk-date" required>
+            <small class="note" id="bk-date-hint"></small>
           </div>
           <div class="field">
             <label for="bk-slot">Time slot</label>
@@ -438,10 +445,15 @@
             <label for="bk-phone">Phone / WhatsApp</label>
             <input type="tel" id="bk-phone" placeholder="+357 …" required>
           </div>
+          <div class="field">
+            <label for="bk-email">Email</label>
+            <input type="email" id="bk-email" placeholder="you@example.com" required>
+          </div>
           <div class="price-row">
             <span>Total</span>
             <span class="amount" id="bk-price">€0</span>
           </div>
+          <p class="note" id="bk-funds"></p>
           <button class="btn btn-primary" type="submit" style="width:100%;justify-content:center">Request booking</button>
           <p class="note" id="bk-note"></p>
         </form>
@@ -454,12 +466,12 @@
 <!-- ============ DONATE ============ -->
 <section class="section alt" id="donate">
   <div class="wrap">
-    <span class="eyebrow reveal">Support the rescue</span>
-    <h2 class="reveal d1">Ways to donate</h2>
-    <p class="lead reveal d2">100% of donations go towards food, vet care and keeping our
+    <span class="eyebrow reveal" data-txt="donate.eyebrow">Support the rescue</span>
+    <h2 class="reveal d1" data-txt="donate.heading">Ways to donate</h2>
+    <p class="lead reveal d2" data-txt="donate.lead">100% of donations go towards food, vet care and keeping our
       foster animals safe. Thank you for anything you can give.</p>
     <div class="donate-box reveal d2">
-      <h3>Choose a way to give</h3>
+      <h3 data-txt="donate.boxHeading">Choose a way to give</h3>
       <div class="donate-methods" id="donate-methods"></div>
     </div>
   </div>
@@ -468,16 +480,16 @@
 <!-- ============ CONTACT ============ -->
 <section class="section" id="contact">
   <div class="wrap">
-    <span class="eyebrow reveal">Get in touch</span>
-    <h2 class="reveal d1">Contact &amp; follow us</h2>
+    <span class="eyebrow reveal" data-txt="contact.eyebrow">Get in touch</span>
+    <h2 class="reveal d1" data-txt="contact.heading">Contact &amp; follow us</h2>
     <div class="contact-grid">
       <div class="reveal d2">
-        <p class="lead">Questions about adopting, fostering or the dog park? We'd love to hear from you.</p>
+        <p class="lead" data-txt="contact.lead">Questions about adopting, fostering or the dog park? We'd love to hear from you.</p>
         <p>📧 <a id="c-email" href="#">loading…</a></p>
         <p>💬 WhatsApp: <a id="c-whatsapp" href="#">loading…</a></p>
       </div>
       <div class="social reveal d3">
-        <p style="font-weight:800;color:var(--navy);margin:0 0 6px">Follow the rescue &amp; the park</p>
+        <p style="font-weight:800;color:var(--navy);margin:0 0 6px" data-txt="contact.socialHeading">Follow the rescue &amp; the park</p>
         <div id="social-links"></div>
       </div>
     </div>
@@ -488,12 +500,21 @@
   <div class="wrap">
     <img src="assets/logo.svg" alt="Alex's Farm of Strays" style="width:88px;height:88px;margin:0 auto 12px;border-radius:50%;box-shadow:0 10px 26px rgba(0,0,0,.35)">
     <div class="hearts">🐾💛🐾</div>
-    <p><strong>Alex's Farm of Strays Animal Rescue</strong> · Paphos, Cyprus</p>
-    <p>Registered animal rescue · No government funding · Run on kindness</p>
-    <p style="opacity:.7;font-size:.85rem">© <span id="yr"></span> Alex's Farm of Strays Animal Rescue.</p>
-    <p style="opacity:.7;font-size:.85rem">Website created by <a href="https://www.oneaxion.com" target="_blank" rel="noopener">One Axion</a> · www.oneaxion.com</p>
+    <p data-txt="footer.org"><strong>Alex's Farm of Strays Animal Rescue</strong> · Paphos, Cyprus</p>
+    <p data-txt="footer.tagline">Registered Animal Rescue • Volunteer Run • No Government Funding</p>
+    <p style="opacity:.7;font-size:.85rem">© <span id="yr"></span> Alex's Farm of Strays. All rights reserved.</p>
+    <p style="opacity:.7;font-size:.85rem">Website created by <a href="https://www.oneaxion.com" target="_blank" rel="noopener">One Axion</a> · <a href="https://www.oneaxion.com" target="_blank" rel="noopener">www.oneaxion.com</a></p>
   </div>
 </footer>
+
+<!-- Photo lightbox — shows the full, uncropped animal photo when a card photo is tapped -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Animal photo">
+  <button class="lb-close" id="lbClose" type="button" aria-label="Close photo">&times;</button>
+  <figure>
+    <img id="lbImg" src="" alt="">
+    <figcaption id="lbCap"></figcaption>
+  </figure>
+</div>
 
 <script src="config.js"></script>
 <script>
@@ -502,12 +523,103 @@
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const mk = html => { const t=document.createElement('template'); t.innerHTML=String(html).trim(); return t.content.firstElementChild; };
+
+  // ---- Photo lightbox: tap any animal photo to see it full-size ------------
+  (function setupLightbox(){
+    const lb=document.getElementById('lightbox');
+    if(!lb) return;
+    const lbImg=document.getElementById('lbImg'), lbCap=document.getElementById('lbCap'), lbClose=document.getElementById('lbClose');
+    const open=(src,name)=>{ lbImg.src=src; lbImg.alt=name||''; lbCap.textContent=name||''; lb.classList.add('open'); document.body.style.overflow='hidden'; lbClose.focus(); };
+    const close=()=>{ lb.classList.remove('open'); lbImg.removeAttribute('src'); document.body.style.overflow=''; };
+    // delegated so it still works after the grid re-renders (e.g. Supabase load)
+    document.addEventListener('click', e=>{
+      const z=e.target.closest && e.target.closest('img.zoomable');
+      if(z){ open(z.getAttribute('src'), z.getAttribute('data-name')); return; }
+      if(e.target===lb || e.target===lbClose){ close(); }
+    });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape' && lb.classList.contains('open')) close(); });
+  })();
   const val = id => { const e=document.getElementById(id); return e?e.value:''; };
   const yr=document.getElementById('yr'); if(yr) yr.textContent=new Date().getFullYear();
 
   const stripeOn = () => !!(CFG.stripePublishableKey && String(CFG.stripePublishableKey).indexOf('pk_')===0);
   const sbOn = () => !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
   const curr = () => (CFG.park && CFG.park.currency==='GBP') ? '£' : '€';
+
+  /* ---------- editable content + theme (admin settings merged over config) ---------- */
+  // The public site reads a single JSON "settings" row from Supabase (if set up)
+  // and deep-merges it over the defaults in config.js. If Supabase is not
+  // configured — or the fetch fails — the site renders entirely from config.js,
+  // so it can never break.
+  function isObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
+  function deepMerge(base, over){
+    if(!isObj(over)) return base;
+    Object.keys(over).forEach(k=>{
+      if(isObj(base[k]) && isObj(over[k])) deepMerge(base[k], over[k]);
+      else if(over[k]!==undefined) base[k]=over[k];   // arrays & scalars replace
+    });
+    return base;
+  }
+  const THEME_VARS=['--sky','--sky-soft','--blue','--blue-deep','--navy','--navy-soft','--amber','--amber-deep','--cream','--cream-deep','--ink','--muted','--line','--bg','--soft','--status-available','--status-rehomed','--tag-other'];
+  function applyTheme(t){
+    if(!isObj(t)) return; const r=document.documentElement;
+    if(isObj(t.colors)) Object.keys(t.colors).forEach(k=>{ const n=k[0]==='-'?k:('--'+k); if(THEME_VARS.indexOf(n)>=0 && t.colors[k]) r.style.setProperty(n, t.colors[k]); });
+    if(t.font) r.style.setProperty('--font', t.font);
+    if(t.scale){ const s=parseFloat(t.scale); if(s>=.8 && s<=1.3) r.style.setProperty('--scale', String(s)); }
+  }
+  function applyText(map){
+    if(!isObj(map)) return;
+    document.querySelectorAll('[data-txt]').forEach(el=>{ const k=el.getAttribute('data-txt'); if(map[k]!=null && map[k]!=='') el.textContent=map[k]; });
+  }
+  const DEFAULT_HELP=[
+    {icon:'🏡',title:'Foster',text:"Foster a rescue animal until they're adopted. We cover food and vet care, you provide a safe temporary home.",btn:'Become a foster',href:'#contact'},
+    {icon:'🤝',title:'Volunteer',text:'Help in our charity shop, with rescue missions, airport runs for adopted animals, or keeping Paphos Paws Park clean and safe. Every helping hand counts.',btn:'Volunteer with us',href:'#contact'},
+    {icon:'💛',title:'Donate',text:'From food to vet bills, donations keep our rescues healthy and safe. Any amount helps.',btn:'Make a donation',href:'#donate'},
+    {icon:'🐕',title:'Adopt',text:'Give a rescue animal the home they deserve and help us make room for another animal in need.',btn:'Start adopting',href:'#adopt'},
+    {icon:'📣',title:'Share',text:'Follow and share our posts. A single share can be the reason an animal finds their home.',btn:'Follow us',href:'#contact'},
+    {icon:'🌳',title:'Visit the park',text:'Let your dog enjoy some private playtime while helping support our rescue work.',btn:'Book the park',href:'#park'}
+  ];
+  function renderHelp(){
+    const g=document.getElementById('help-grid'); if(!g) return;
+    const cards=(CFG.helpCards&&CFG.helpCards.length)?CFG.helpCards:DEFAULT_HELP;
+    g.innerHTML=cards.map((c,i)=>`<div class="help-card reveal d${(i%3)+1}"><div class="ico">${esc(c.icon||'🐾')}</div><h3>${esc(c.title||'')}</h3><p>${esc(c.text||'')}</p>${c.btn?`<a class="btn btn-primary" href="${esc(c.href||'#contact')}">${esc(c.btn)}</a>`:''}</div>`).join('');
+  }
+  function socialList(){
+    if(Array.isArray(CFG.socials)&&CFG.socials.length) return CFG.socials;
+    const a=[];
+    if(CFG.facebookRescue) a.push({type:'facebook',label:'Rescue Facebook',url:CFG.facebookRescue});
+    if(CFG.facebookPark)   a.push({type:'facebook',label:'Paphos Paws Park',url:CFG.facebookPark});
+    if(CFG.tiktok)         a.push({type:'tiktok',label:'TikTok',url:CFG.tiktok});
+    if(CFG.charityShop)    a.push({type:'shop',label:'Charity shop',url:CFG.charityShop});
+    return a;
+  }
+  function donateList(){
+    const d=CFG.donate||{};
+    if(Array.isArray(d.methods)&&d.methods.length) return d.methods;
+    const a=[];
+    if(d.bankName||d.iban) a.push({label:'Bank transfer', lines:['Account name: '+(d.bankName||'')], code:d.iban||''});
+    if(d.revolut) a.push({label:'Revolut', url:d.revolut});
+    if(d.paypal)  a.push({label:'PayPal',  url:d.paypal});
+    return a;
+  }
+  function renderAll(){
+    applyTheme(CFG.theme); applyText(CFG.text);
+    renderStats(); renderStory(); renderSteps(); renderHelp(); renderPark(); renderDonate(); renderContact();
+    const hl=document.getElementById('hero-lead'); if(hl&&CFG.strapline) hl.textContent=CFG.strapline;
+    const sb=document.querySelector('#bookingForm button[type=submit]'); if(sb) sb.textContent=stripeOn()?'Book & pay':'Request booking';
+  }
+  function loadSettings(){
+    if(!sbOn()) return;
+    fetch(CFG.supabaseUrl+'/rest/v1/site_settings?id=eq.main&select=data',{headers:{apikey:CFG.supabaseAnonKey,Authorization:'Bearer '+CFG.supabaseAnonKey}})
+      .then(r=>r.ok?r.json():[]).then(rows=>{
+        const data=Array.isArray(rows)&&rows[0]&&rows[0].data;
+        if(!isObj(data)) return;
+        deepMerge(CFG, data);
+        renderAll();
+        const d=document.getElementById('bk-date'); if(d){ const days=Math.max(1,Math.ceil(((CFG.park&&CFG.park.minNoticeHours)||24)/24)); const md=new Date(); md.setDate(md.getDate()+days); d.min=md.toISOString().split('T')[0]; }
+        setupTilt(); observeReveals(document);
+      }).catch(()=>{});
+  }
 
   /* ---------- render from config ---------- */
   function renderStats(){
@@ -535,7 +647,8 @@
     const pill=`<span class="status-pill ${rehomed?'rehomed':'available'}">${rehomed?'Re-Homed':'Available'}</span>`;
     const tag=`<span class="tag ${m.cls}">${esc(m.label)}</span>`;
     const ph=`<span class="photo-ph">${m.emoji} ${esc(m.label)} photo</span>`;
-    const img=a.photo?`<img src="${esc(a.photo)}" alt="${esc(a.name)}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2">`:'';
+    const focus=esc(a.focus||'center 30%');
+    const img=a.photo?`<img src="${esc(a.photo)}" alt="${esc(a.name)}" class="zoomable" data-name="${esc(a.name)}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:${focus};z-index:2">`:'';
     const details=(a.details&&a.details.length)?`<ul class="details">${a.details.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
     return `<div class="tilt reveal d${(i%3)+1}"><div class="card"><div class="photo">${ph}${img}${tag}${pill}</div>`
       +`<div class="body"><h3>${esc(a.name)}</h3><p>${esc(a.blurb)}</p>${details}`
@@ -571,12 +684,19 @@
     if(note) note.textContent=stripeOn()
       ? "You'll be taken to a secure card-payment page to confirm your booking."
       : "We'll confirm your booking by WhatsApp — tap the button and send us the pre-filled message.";
+    const fn=document.getElementById('bk-funds');
+    if(fn) fn.textContent=p.fundsMessage||'Every booking helps fund food and vet care for our rescue animals — thank you! 🐾';
+    const hint=document.getElementById('bk-date-hint');
+    if(hint) hint.textContent='Please book at least '+(p.minNoticeHours||24)+' hours in advance.';
   }
   function renderDonate(){
-    const g=document.getElementById('donate-methods'); if(!g) return; const d=CFG.donate||{}; let o='';
-    if(d.bankName||d.iban) o+=`<div class="method"><b>Bank transfer</b><br>Account name: <code>${esc(d.bankName||'')}</code><br>IBAN: <code>${esc(d.iban||'')}</code></div>`;
-    if(d.revolut){ const rv=/^https?:/i.test(d.revolut)?`<a href="${esc(d.revolut)}" target="_blank" rel="noopener">${esc(d.revolut.replace(/^https?:\/\//,''))}</a>`:`<code>${esc(d.revolut)}</code>`; o+=`<div class="method"><b>Revolut</b><br>${rv}</div>`; }
-    if(d.paypal) o+=`<div class="method"><b>PayPal</b><br><a href="${esc(d.paypal)}" target="_blank" rel="noopener">${esc(d.paypal)}</a></div>`;
+    const g=document.getElementById('donate-methods'); if(!g) return;
+    let o=donateList().map(m=>{
+      const lines=(m.lines||[]).map(l=>`<br>${esc(l)}`).join('');
+      const code=m.code?`<br><code>${esc(m.code)}</code>`:'';
+      const url=m.url?`<br><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(String(m.url).replace(/^https?:\/\//,''))}</a>`:'';
+      return `<div class="method"><b>${esc(m.label||'')}</b>${lines}${code}${url}</div>`;
+    }).join('');
     o+=`<div class="method"><b>Card${stripeOn()?'':' (coming soon)'}</b><br>${stripeOn()?'Quick, secure card donations.':'One-tap card donations once Stripe is live.'}</div>`;
     g.innerHTML=o;
   }
@@ -584,15 +704,12 @@
   const ICON_TT='<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style="flex:0 0 auto"><path fill="#010101" d="M16.6 5.82a4.28 4.28 0 0 1-1.06-2.82h-3.2v12.93a2.6 2.6 0 1 1-2.6-2.6c.27 0 .53.04.78.12v-3.3a5.9 5.9 0 0 0-.78-.05A5.9 5.9 0 1 0 15.64 16V9.4a7.5 7.5 0 0 0 4.36 1.4V7.6a4.28 4.28 0 0 1-3.4-1.78z"/></svg>';
   function renderContact(){
     const e=document.getElementById('c-email'); if(e&&CFG.email){ e.textContent=CFG.email; e.href='mailto:'+CFG.email; }
+    const ae=document.getElementById('adopt-email'); if(ae&&CFG.email){ ae.textContent=CFG.email; ae.href='mailto:'+CFG.email; }
     const num=(CFG.whatsapp||'').replace(/\D/g,'');
     const w=document.getElementById('c-whatsapp'); if(w){ w.textContent=CFG.phoneDisplay||('+'+num); w.href='https://wa.me/'+num; }
-    const s=document.getElementById('social-links'); if(s){ let o='';
-      if(CFG.facebookRescue) o+=`<a href="${esc(CFG.facebookRescue)}" target="_blank" rel="noopener">${ICON_FB} Rescue Facebook</a>`;
-      if(CFG.facebookPark) o+=`<a href="${esc(CFG.facebookPark)}" target="_blank" rel="noopener">${ICON_FB} Paphos Paws Park</a>`;
-      if(CFG.tiktok) o+=`<a href="${esc(CFG.tiktok)}" target="_blank" rel="noopener">${ICON_TT} TikTok</a>`;
-      if(CFG.charityShop) o+=`<a href="${esc(CFG.charityShop)}" target="_blank" rel="noopener">🛍️ Charity shop</a>`;
-      s.innerHTML=o;
-    }
+    const ICONS={facebook:ICON_FB, tiktok:ICON_TT, instagram:'📷', youtube:'▶️', website:'🔗', link:'🔗', shop:'🛍️', email:'📧'};
+    const s=document.getElementById('social-links');
+    if(s) s.innerHTML=socialList().filter(x=>x&&x.url).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">${ICONS[x.type]||'🔗'} ${esc(x.label||x.type||'Link')}</a>`).join('');
   }
 
   /* ---------- price + booking (exposed for inline handlers) ---------- */
@@ -607,18 +724,20 @@
 
   function submitBooking(e){
     e.preventDefault();
-    const date=val('bk-date'),slot=val('bk-slot'),dogs=val('bk-dogs'),name=val('bk-name').trim(),phone=val('bk-phone').trim();
-    if(!date||!slot||!name||!phone){ alert('Please fill in all the fields.'); return false; }
+    const date=val('bk-date'),slot=val('bk-slot'),dogs=val('bk-dogs'),name=val('bk-name').trim(),phone=val('bk-phone').trim(),email=val('bk-email').trim();
+    if(!date||!slot||!name||!phone||!email){ alert('Please fill in all the fields, including your email.'); return false; }
+    const dEl=document.getElementById('bk-date');
+    if(dEl&&dEl.min&&date<dEl.min){ const hrs=(CFG.park&&CFG.park.minNoticeHours)||24; alert('Please choose a date at least '+hrs+' hours from now.'); return false; }
     const total=updatePrice();
     if(stripeOn()){
       const btn=e.target.querySelector('button[type=submit]'); if(btn){ btn.disabled=true; btn.textContent='Redirecting…'; }
-      fetch('/api/create-checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,slot,dogs,name,phone,amount:total})})
+      fetch('/api/create-checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,slot,dogs,name,phone,email,amount:total})})
         .then(r=>r.json()).then(d=>{ if(d.url) location.href=d.url; else throw new Error(d.error||'error'); })
         .catch(()=>{ alert('Sorry, something went wrong starting the payment. Please try again or contact us.'); if(btn){ btn.disabled=false; btn.textContent='Book & pay'; } });
       return false;
     }
     const num=(CFG.whatsapp||'').replace(/\D/g,'');
-    const msg=`Hi! I'd like to book Paphos Paws Park 🐾%0A%0AName: ${name}%0APhone: ${phone}%0ADate: ${date}%0ATime: ${slot}%0ADogs: ${dogs}%0ATotal: ${curr()}${total}`;
+    const msg=`Hi! I'd like to book Paphos Paws Park 🐾%0A%0AName: ${name}%0APhone: ${phone}%0AEmail: ${email}%0ADate: ${date}%0ATime: ${slot}%0ADogs: ${dogs}%0ATotal: ${curr()}${total}`;
     window.open(`https://wa.me/${num}?text=${msg}`,'_blank');
     return false;
   }
@@ -668,17 +787,16 @@
       let n=0; const step=Math.max(1,Math.round(target/45)); const t=setInterval(()=>{ n+=step; if(n>=target){ n=target; clearInterval(t); } el.textContent=pre+n+suf; },24); countIO.unobserve(el);
     }),{threshold:.5});
 
-    renderStats(); renderStory(); renderSteps(); renderPark(); renderDonate(); renderContact();
-    const hl=document.getElementById('hero-lead'); if(hl&&CFG.strapline) hl.textContent=CFG.strapline;
-    const sb=document.querySelector('#bookingForm button[type=submit]'); if(sb) sb.textContent=stripeOn()?'Book & pay':'Request booking';
+    renderAll();
     renderAnimals();
     loadAnimalsFromSupabase();
+    loadSettings();
     setupTilt(); observeReveals(document);
 
     const hdr=document.getElementById('hdr'); if(hdr){ const onScroll=()=>hdr.classList.toggle('scrolled',window.scrollY>20); onScroll(); window.addEventListener('scroll',onScroll,{passive:true}); }
     if(!reduce){ const paws=document.getElementById('paws'); if(paws){ for(let i=0;i<12;i++){ const s=document.createElement('span'); s.className='paw'; s.textContent='🐾'; s.style.left=Math.random()*100+'%'; s.style.bottom=(-20+Math.random()*40)+'%'; s.style.fontSize=(1+Math.random()*1.6)+'rem'; s.style.animationDuration=(7+Math.random()*8)+'s'; s.style.animationDelay=(-Math.random()*10)+'s'; paws.appendChild(s); } } }
 
-    const d=document.getElementById('bk-date'); if(d){ d.min=new Date().toISOString().split('T')[0]; d.addEventListener('change',loadBookedSlots); }
+    const d=document.getElementById('bk-date'); if(d){ const days=Math.max(1,Math.ceil(((CFG.park&&CFG.park.minNoticeHours)||24)/24)); const md=new Date(); md.setDate(md.getDate()+days); d.min=md.toISOString().split('T')[0]; d.addEventListener('change',loadBookedSlots); }
     bookingBanner();
     document.querySelectorAll('#nav a').forEach(a=>a.addEventListener('click',()=>document.getElementById('nav').classList.remove('open')));
   }
