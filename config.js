@@ -147,7 +147,7 @@ window.SITE_CONFIG = {
      Fill them in later (see SETUP-GUIDE.md) to switch on:
         • card payments for the dog park (Stripe)
         • managing animals & bookings from the admin page (Supabase)            */
-  supabaseUrl:          "",   // e.g. "https://abcd1234.supabase.co"
-  supabaseAnonKey:      "",   // your Supabase "anon public" key
+  supabaseUrl:          "https://mstcjicvpgsijeozroae.supabase.co",   // e.g. "https://abcd1234.supabase.co"
+  supabaseAnonKey:      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zdGNqaWN2cGdzaWplb3pyb2FlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2OTgzMzAsImV4cCI6MjA5NzI3NDMzMH0.bDrvTDfpMvJuks6wuA51jzGctkdDFtpDquH820qN80A",   // your Supabase "anon public" key
   stripePublishableKey: ""    // your Stripe "publishable" key (starts with pk_)
 };
