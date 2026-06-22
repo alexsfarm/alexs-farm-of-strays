@@ -184,6 +184,13 @@ async function loadAll(){
   if(!S.storyParagraphs.length && Array.isArray(C.storyParagraphs)) S.storyParagraphs = C.storyParagraphs.slice();
   if(!S.stats.length && Array.isArray(C.stats)) S.stats = C.stats.map(o=>Object.assign({},o));
   if(!S.adoptionSteps.length && Array.isArray(C.adoptionSteps)) S.adoptionSteps = C.adoptionSteps.map(o=>Object.assign({},o));
+  if(!S.donate.methods.length){
+    const cd=C.donate||{}, dm=[];
+    if(cd.bankName||cd.iban) dm.push({label:'Bank transfer', lines:cd.bankName?['Account name: '+cd.bankName]:[], code:cd.iban||'', url:''});
+    if(cd.revolut) dm.push({label:'Revolut', lines:[], code:'', url:cd.revolut});
+    if(cd.paypal)  dm.push({label:'PayPal', lines:[], code:'', url:cd.paypal});
+    if(dm.length) S.donate.methods = dm;
+  }
   try{ A = await api('list-animals') || []; }catch(e){ A = []; }
   if(!Array.isArray(A)) A = [];
   try{ B = await api('list-bookings') || []; }catch(e){ B = []; }
@@ -448,7 +455,11 @@ function renderDonate(p){
     g.appendChild(inputField('Code / number (optional, e.g. IBAN)', item.code, v=> item.code=v));
     g.appendChild(inputField('Link (optional, e.g. PayPal.me)', item.url, v=> item.url=v, {placeholder:'https://…'}));
     box.appendChild(g);
-  }, 'Add donation method', 'Leave this empty to fall back to the bank / Revolut / PayPal details in config.js. A "Card" tile is always shown automatically (live once Stripe is connected).'));
+  }, 'Add donation method', 'These tiles appear in the "Choose a way to give" section. Edit or remove any of them, or add new ones.'));
+  const cc=el('div',{class:'card'}); cc.appendChild(el('h3',{},['Card payments tile']));
+  cc.appendChild(el('p',{class:'muted'},['A "Card (coming soon)" tile is shown automatically and turns into live card donations once Stripe is connected. You can hide it here if you prefer not to show it.']));
+  cc.appendChild(selectField('Show the "Card" tile?', (S.donate.hideCard?'no':'yes'), [['yes','Show it'],['no','Hide it']], v=> S.donate.hideCard = (v==='no')));
+  p.appendChild(cc);
 }
 
 /* ===== LINKS & SOCIAL ===== */
