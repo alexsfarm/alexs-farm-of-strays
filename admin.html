@@ -515,15 +515,17 @@ function renderPark(p){
 
 /* ===== BOOKINGS ===== */
 function renderBookings(p){
-  if(!B.length){ p.appendChild(el('div',{class:'card'},[el('h3',{},['Bookings']), el('p',{class:'muted'},['No bookings yet. (They appear here once Stripe card payments are live.)'])])); return; }
-  const c=el('div',{class:'card'}); c.appendChild(el('h3',{},['Dog-park bookings']));
+  if(!B.length){ p.appendChild(el('div',{class:'card'},[el('h3',{},['Bookings']), el('p',{class:'muted'},['No booking requests yet. Requests made on the website appear here.'])])); return; }
+  const c=el('div',{class:'card'}); c.appendChild(el('h3',{},['Dog-park booking requests']));
+  c.appendChild(el('p',{class:'muted'},['"requested" = awaiting your confirmation. Mark confirmed once the customer has paid, Mark cancelled to decline, or Delete to remove it and free the slot.']));
   B.forEach(b=>{
+    const ref='PPP-'+String(b.date||'').replace(/-/g,'').slice(2)+'-'+String(b.id||'').replace(/-/g,'').slice(0,4).toUpperCase();
     const box=el('div',{class:'item'});
-    box.appendChild(el('div',{html:`<b>${esc(b.date)}</b> · ${esc(b.slot)} · ${esc(b.name||'')} · ${esc(b.phone||'')} · ${esc(b.dogs)} dog(s) · <span class="pill">${esc(b.status)}</span>`}));
+    box.appendChild(el('div',{html:`<b>${esc(ref)}</b> &middot; <b>${esc(b.date)}</b> &middot; ${esc(b.slot)} &middot; ${esc(b.name||'')} &middot; ${esc(b.phone||'')} &middot; ${esc(b.email||'')} &middot; ${esc(b.dogs)} dog(s)${b.amount!=null?(' &middot; €'+esc(b.amount)):''} &middot; <span class="pill">${esc(b.status)}</span>`}));
     const row=el('div',{class:'row',style:'margin-top:8px'});
-    row.appendChild(el('button',{class:'btn btn-light btn-sm',onclick:async()=>{ await api('update-booking',{id:b.id,booking:{status:'confirmed'}}); b.status='confirmed'; render(); }},['Mark confirmed']));
+    row.appendChild(el('button',{class:'btn btn-blue btn-sm',onclick:async()=>{ await api('update-booking',{id:b.id,booking:{status:'confirmed'}}); b.status='confirmed'; render(); }},['Mark confirmed']));
     row.appendChild(el('button',{class:'btn btn-light btn-sm',onclick:async()=>{ await api('update-booking',{id:b.id,booking:{status:'cancelled'}}); b.status='cancelled'; render(); }},['Mark cancelled']));
-    row.appendChild(el('button',{class:'btn btn-danger',style:'margin-left:auto',onclick:async()=>{ if(confirm('Delete this booking?')){ await api('delete-booking',{id:b.id}); B=await api('list-bookings'); render(); } }},['Delete']));
+    row.appendChild(el('button',{class:'btn btn-danger',style:'margin-left:auto',onclick:async()=>{ if(confirm('Delete this booking and free the slot?')){ await api('delete-booking',{id:b.id}); B=await api('list-bookings'); render(); } }},['Delete (free slot)']));
     box.appendChild(row); c.appendChild(box);
   });
   p.appendChild(c);
