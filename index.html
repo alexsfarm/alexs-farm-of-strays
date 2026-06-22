@@ -310,7 +310,7 @@
     .reveal{opacity:1;transform:none}
   }
 </style>
-<script type='text/javascript' src='https://api.netlify.com/geg6E20uhgM_hl-fmUTkP-8h-inFaYMWhHnc6W9k9_4Vus-tkmfLGEFYFrxZ9Hh0NRhMAoz118qbSQcmgs5hoH7KCZ-wYs55Usr8MnK76TJEL9hXX1MxNtuk65S5lQOwtvsNl1av67uXLQhZ9VfJrmolOWbHIu_fqmN1qf2bu23cNQ0yALMTMvk0ZFMKAS3nuNRyo-B4joTsYOt1qo4r4jzrPz6GZKovVJRe2pzqoAmU_2fHaANrv5CnKmnvg1KXDW3o-MWp87j36EKrNxWnW8hRSlt3DOQu45S0yY2urZJsH3KgQjji0V01fJvzeAL0rQG1KsEFt9_oWDaJVaO31QZhWVnyrVNCAL3u5VLGdKDp5m4e2b4BTSBuXZfwCrOhkJHUuyLjOrHSt99kkM1UOK4-xQ-U9yT1y_2MoBHkg7nDY0cOjoNlVg1hPx7lNOyI5z7NEjVoKDQIhK8AZGDFy7SvUJmeausA2gc4D3FGJpi5yk0IW__l7kFrB9NbLKTjwCd8pRe36W0_AhGJrAaY'></script></head>
+</head>
 <body>
 
 <!-- ============ HEADER ============ -->
@@ -552,15 +552,15 @@
   // configured — or the fetch fails — the site renders entirely from config.js,
   // so it can never break.
   function isObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
-   function deepMerge(base, over){
+  function deepMerge(base, over){
     if(!isObj(over)) return base;
     Object.keys(over).forEach(k=>{
       const v=over[k];
-      if(v===undefined||v===null) return;
-      if(typeof v==='string' && v.trim()==='') return;
-      if(Array.isArray(v)){ if(v.length) base[k]=v; return; }
+      if(v===undefined||v===null) return;                      // nothing saved — keep the config default
+      if(typeof v==='string' && v.trim()==='') return;         // blank text — keep the default
+      if(Array.isArray(v)){ if(v.length) base[k]=v; return; }   // empty list — keep the default (don't wipe)
       if(isObj(v)){ if(!isObj(base[k])) base[k]={}; deepMerge(base[k], v); return; }
-      base[k]=v;
+      base[k]=v;                                                // a real value — use it
     });
     return base;
   }
@@ -740,9 +740,23 @@
         .catch(()=>{ alert('Sorry, something went wrong starting the payment. Please try again or contact us.'); if(btn){ btn.disabled=false; btn.textContent='Book & pay'; } });
       return false;
     }
+    // No Stripe: save the request (holds the slot + gives a reference), then
+    // show a confirmation with a one-tap WhatsApp message so Alex can confirm.
     const num=(CFG.whatsapp||'').replace(/\D/g,'');
-    const msg=`Hi! I'd like to book Paphos Paws Park 🐾%0A%0AName: ${name}%0APhone: ${phone}%0AEmail: ${email}%0ADate: ${date}%0ATime: ${slot}%0ADogs: ${dogs}%0ATotal: ${curr()}${total}`;
-    window.open(`https://wa.me/${num}?text=${msg}`,'_blank');
+    const waMsg=ref=>`Hi! I'd like to book Paphos Paws Park 🐾%0A%0A${ref?('Ref: '+ref+'%0A'):''}Name: ${name}%0APhone: ${phone}%0AEmail: ${email}%0ADate: ${date}%0ATime: ${slot}%0ADogs: ${dogs}%0ATotal: ${curr()}${total}`;
+    const note=document.getElementById('bk-note');
+    const btn=e.target.querySelector('button[type=submit]'); if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+    const reset=()=>{ if(btn){ btn.disabled=false; btn.textContent='Request booking'; } };
+    fetch('/api/request-booking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,slot,dogs,name,phone,email,amount:total})})
+      .then(r=>r.json().then(d=>({status:r.status,d})).catch(()=>({status:r.status,d:{}})))
+      .then(({status,d})=>{
+        reset();
+        if(status===409||(d&&d.error==='slot_taken')){ if(note) note.innerHTML='⚠️ Sorry, that time slot was just taken — please choose another.'; loadBookedSlots(); return; }
+        const ref=(d&&d.ref)||'';
+        if(note) note.innerHTML=`✅ <b>Request received${ref?(' — reference '+esc(ref)):''}.</b> Your slot is held while we confirm. Final step — tap to send your details on WhatsApp:<br><a class="btn btn-primary" style="margin-top:10px" target="_blank" rel="noopener" href="https://wa.me/${num}?text=${waMsg(ref)}">Send on WhatsApp</a>`;
+        loadBookedSlots();
+      })
+      .catch(()=>{ reset(); if(note) note.innerHTML=`Tap to send your booking to us on WhatsApp:<br><a class="btn btn-primary" style="margin-top:10px" target="_blank" rel="noopener" href="https://wa.me/${num}?text=${waMsg('')}">Send on WhatsApp</a>`; });
     return false;
   }
   window.submitBooking=submitBooking;
