@@ -8,7 +8,7 @@ export default async (req) => {
   if (!SB || !KEY || !date) return json({ slots: [] });
 
   const r = await fetch(
-    `${SB}/rest/v1/park_bookings?select=slot&date=eq.${encodeURIComponent(date)}&status=eq.confirmed`,
+    `${SB}/rest/v1/park_bookings?select=slot&date=eq.${encodeURIComponent(date)}&status=in.(requested,confirmed)`,
     { headers: { apikey: KEY, Authorization: 'Bearer ' + KEY } }
   );
   const rows = r.ok ? await r.json() : [];
