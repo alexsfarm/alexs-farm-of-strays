@@ -139,8 +139,11 @@ async function api(action, payload){
     method:'POST', headers:{'Content-Type':'application/json','x-admin-password':PW},
     body: JSON.stringify(Object.assign({action}, payload||{}))
   });
-  if(res.status===401) throw new Error('unauthorized');
-  return res.json();
+  let data=null; try{ data = await res.json(); }catch(e){}
+  if(res.status===401) throw new Error('Wrong admin password (unauthorized).');
+  if(!res.ok) throw new Error((data&&data.error) ? data.error : ('Server error '+res.status));
+  if(data && data.error) throw new Error(data.error);
+  return data;
 }
 
 function unlock(){
@@ -189,12 +192,14 @@ async function loadAll(){
 
 async function saveSettings(){
   try{ await api('save-settings', {settings:S}); toast('Saved ✓  Refresh your website to see the changes.'); }
-  catch(e){ toast('Could not save — check your connection.', true); }
+  catch(e){ toast('Could not save: '+(e.message||'unknown error'), true); }
 }
 function toast(msg, bad){
   const t=document.getElementById('toast'); t.textContent=msg; t.style.background= bad? 'var(--danger)':'var(--ok)';
-  t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'), 3500);
+  t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'), bad?7000:3500);
 }
+// Surface any unexpected save/add/delete/photo/booking failure with a real, useful message
+window.addEventListener('unhandledrejection', e=>{ const m=(e.reason&&e.reason.message)||String(e.reason||'Something went wrong'); toast('⚠️ '+m, true); });
 
 /* ---------- tiny DOM helpers ---------- */
 function el(tag, attrs, kids){
@@ -412,7 +417,7 @@ async function uploadPhoto(a, file){
     const res = await api('upload-photo',{filename:(file.name||'photo.jpg'), contentType, dataB64});
     if(res && res.publicUrl){ await api('update-animal',{id:a.id, animal:{photo_url:res.publicUrl}}); toast('Photo uploaded ✓'); A = await api('list-animals'); render(); }
     else toast('Upload failed: '+((res&&res.error)||'unknown'), true);
-  }catch(e){ toast('Upload failed.', true); }
+  }catch(e){ toast('Upload failed: '+(e.message||'unknown'), true); }
 }
 async function removePhoto(a){
   if(a.photo_url) await api('delete-photo',{path:pathFromUrl(a.photo_url)}).catch(()=>{});
