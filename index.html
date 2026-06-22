@@ -552,11 +552,15 @@
   // configured — or the fetch fails — the site renders entirely from config.js,
   // so it can never break.
   function isObj(x){ return x && typeof x==='object' && !Array.isArray(x); }
-  function deepMerge(base, over){
+   function deepMerge(base, over){
     if(!isObj(over)) return base;
     Object.keys(over).forEach(k=>{
-      if(isObj(base[k]) && isObj(over[k])) deepMerge(base[k], over[k]);
-      else if(over[k]!==undefined) base[k]=over[k];   // arrays & scalars replace
+      const v=over[k];
+      if(v===undefined||v===null) return;
+      if(typeof v==='string' && v.trim()==='') return;
+      if(Array.isArray(v)){ if(v.length) base[k]=v; return; }
+      if(isObj(v)){ if(!isObj(base[k])) base[k]={}; deepMerge(base[k], v); return; }
+      base[k]=v;
     });
     return base;
   }
