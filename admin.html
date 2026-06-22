@@ -132,6 +132,14 @@ const FONTS = [
   ['Soft (Palatino)',"'Palatino Linotype','Book Antiqua',Palatino,serif"]
 ];
 const SOCIAL_TYPES = ['facebook','tiktok','instagram','youtube','website','shop','link'];
+const DEFAULT_HELP = [
+  {icon:'🏡',title:'Foster',text:"Foster a rescue animal until they're adopted. We cover food and vet care, you provide a safe temporary home.",btn:'Become a foster',href:'#contact'},
+  {icon:'🤝',title:'Volunteer',text:'Help in our charity shop, with rescue missions, airport runs for adopted animals, or keeping Paphos Paws Park clean and safe. Every helping hand counts.',btn:'Volunteer with us',href:'#contact'},
+  {icon:'💛',title:'Donate',text:'From food to vet bills, donations keep our rescues healthy and safe. Any amount helps.',btn:'Make a donation',href:'#donate'},
+  {icon:'🐕',title:'Adopt',text:'Give a rescue animal the home they deserve and help us make room for another animal in need.',btn:'Start adopting',href:'#adopt'},
+  {icon:'📣',title:'Share',text:'Follow and share our posts. A single share can be the reason an animal finds their home.',btn:'Follow us',href:'#contact'},
+  {icon:'🌳',title:'Visit the park',text:'Let your dog enjoy some private playtime while helping support our rescue work.',btn:'Book the park',href:'#park'}
+];
 
 /* ---------- API ---------- */
 async function api(action, payload){
@@ -165,6 +173,19 @@ async function enterApp(){
   render();
 }
 
+// Fill any missing/empty fields in `target` from `src` (deep), without
+// overwriting values the user has already set. Lets us pre-load config.js
+// defaults into the editors so editing one item never blanks the rest.
+function deepFill(target, src){
+  if(!src || typeof src!=='object') return target;
+  Object.keys(src).forEach(k=>{
+    const sv=src[k], tv=target[k];
+    if(Array.isArray(sv)){ if(!Array.isArray(tv) || !tv.length) target[k]=sv.map(x=> (x&&typeof x==='object')?Object.assign({},x):x); }
+    else if(sv && typeof sv==='object'){ if(!tv || typeof tv!=='object' || Array.isArray(tv)) target[k]={}; deepFill(target[k], sv); }
+    else { if(tv===undefined || tv===null || tv==='') target[k]=sv; }
+  });
+  return target;
+}
 async function loadAll(){
   try{ S = await api('get-settings') || {}; }catch(e){ S = {}; }
   if(typeof S !== 'object' || S === null) S = {};
@@ -191,6 +212,16 @@ async function loadAll(){
     if(cd.paypal)  dm.push({label:'PayPal', lines:[], code:'', url:cd.paypal});
     if(dm.length) S.donate.methods = dm;
   }
+  if(!S.socials.length){
+    const sc=[];
+    if(C.facebookRescue) sc.push({type:'facebook',label:'Rescue Facebook',url:C.facebookRescue});
+    if(C.facebookPark)   sc.push({type:'facebook',label:'Paphos Paws Park',url:C.facebookPark});
+    if(C.tiktok)         sc.push({type:'tiktok',label:'TikTok',url:C.tiktok});
+    if(C.charityShop)    sc.push({type:'shop',label:'Charity shop',url:C.charityShop});
+    if(sc.length) S.socials = sc;
+  }
+  if(!S.helpCards.length) S.helpCards = DEFAULT_HELP.map(o=>Object.assign({},o));
+  deepFill(S.park, C.park||{});
   try{ A = await api('list-animals') || []; }catch(e){ A = []; }
   if(!Array.isArray(A)) A = [];
   try{ B = await api('list-bookings') || []; }catch(e){ B = []; }
@@ -302,7 +333,7 @@ function renderContent(p){
     box.appendChild(g);
     box.appendChild(inputField('Description', item.text, v=> item.text=v, {tag:'textarea'}));
     box.appendChild(selectField('Button links to', item.href||'#contact', [['#contact','Contact'],['#adopt','Adopt'],['#donate','Donate'],['#park','Dog park'],['#help','Help']], v=> item.href=v));
-  }, 'Add card', 'Leave all "help" cards empty to fall back to the original six.'));
+  }, 'Add card', 'Edit or remove any of the "How you can help" cards, or add new ones.'));
 }
 
 /* generic add/remove list editor */
@@ -471,7 +502,7 @@ function renderLinks(p){
     g.appendChild(inputField('Label', item.label, v=> item.label=v));
     g.appendChild(inputField('Link (URL)', item.url, v=> item.url=v, {placeholder:'https://…'}));
     box.appendChild(g);
-  }, 'Add link', 'Leave empty to fall back to the Facebook / TikTok links in config.js. Icon options: facebook, tiktok, instagram, youtube, website, shop, link.'));
+  }, 'Add link', 'Edit or remove any of the social links, or add new ones. Icon options: facebook, tiktok, instagram, youtube, website, shop, link.'));
 }
 
 /* ===== PARK & BOOKING ===== */
