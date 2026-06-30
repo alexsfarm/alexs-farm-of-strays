@@ -506,6 +506,26 @@ function renderLinks(p){
 }
 
 /* ===== PARK & BOOKING ===== */
+async function uploadParkPhoto(file){
+  toast('Uploading photo…');
+  try{
+    const {dataB64,contentType}=await downscale(file);
+    const res=await api('upload-photo',{filename:(file.name||'park.jpg'), contentType, dataB64});
+    if(res&&res.publicUrl){ S.park.gallery=Array.isArray(S.park.gallery)?S.park.gallery:[]; S.park.gallery.push({url:res.publicUrl, path:res.path}); await api('save-settings',{settings:S}); toast('Photo added ✓'); render(); }
+    else toast('Upload failed: '+((res&&res.error)||'unknown'), true);
+  }catch(e){ toast('Upload failed: '+(e.message||'unknown'), true); }
+}
+async function removeParkPhoto(i){
+  const a=S.park.gallery||[]; const g=a[i]; if(!g) return;
+  if(!confirm('Delete this park photo?')) return;
+  const path=(g&&typeof g==='object'&&g.path)?g.path:pathFromUrl(typeof g==='string'?g:(g&&g.url));
+  if(path) await api('delete-photo',{path}).catch(()=>{});
+  a.splice(i,1); await api('save-settings',{settings:S}); toast('Photo deleted'); render();
+}
+async function moveParkPhoto(i,dir){
+  const a=S.park.gallery||[]; const j=i+dir; if(j<0||j>=a.length) return;
+  const t=a[i]; a[i]=a[j]; a[j]=t; await api('save-settings',{settings:S}); render();
+}
 function renderPark(p){
   const k=S.park;
   p.appendChild(el('div',{class:'note'},['Settings for Paphos Paws Park and the booking form. Time slots are one per line, e.g. "07:30 – 08:30".']));
@@ -542,6 +562,27 @@ function renderPark(p){
     sc.appendChild(d);
   });
   p.appendChild(sc);
+
+  // Park photos (gallery / carousel)
+  k.gallery = Array.isArray(k.gallery) ? k.gallery : [];
+  const gc=el('div',{class:'card'}); gc.appendChild(el('h3',{},['Park photos (carousel)']));
+  gc.appendChild(el('p',{class:'muted'},['Shown in the photo carousel on the Dog Park section. Upload photos (auto-shrunk, so phone photos are fine), reorder with the arrows, or delete. These save automatically.']));
+  const up=el('input',{type:'file', accept:'image/*', multiple:'multiple'});
+  up.addEventListener('change', async()=>{ const files=Array.from(up.files||[]); up.value=''; for(const f of files){ await uploadParkPhoto(f); } });
+  gc.appendChild(up);
+  const pgr=el('div',{class:'grid3',style:'margin-top:12px'});
+  if(!k.gallery.length){ pgr.appendChild(el('p',{class:'muted'},['No park photos yet — upload one above.'])); }
+  k.gallery.forEach((g,i)=>{
+    const url=(typeof g==='string')?g:(g&&g.url);
+    const box=el('div',{class:'item'});
+    box.appendChild(el('img',{src:url||'assets/logo.svg', alt:'', style:'width:100%;height:120px;object-fit:cover;border-radius:8px'}));
+    const row=el('div',{class:'row',style:'margin-top:6px'});
+    row.appendChild(el('button',{class:'btn btn-light btn-sm',onclick:()=>moveParkPhoto(i,-1)},['↑']));
+    row.appendChild(el('button',{class:'btn btn-light btn-sm',onclick:()=>moveParkPhoto(i,1)},['↓']));
+    row.appendChild(el('button',{class:'btn btn-danger btn-sm',style:'margin-left:auto',onclick:()=>removeParkPhoto(i)},['Delete']));
+    box.appendChild(row); pgr.appendChild(box);
+  });
+  gc.appendChild(pgr); p.appendChild(gc);
 
   // Lockbox codes
   const lc=el('div',{class:'card'}); lc.appendChild(el('h3',{},['Dog-park access codes (kept private)']));
