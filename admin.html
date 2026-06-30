@@ -563,7 +563,7 @@ function renderBookings(p){
   B.forEach(b=>{
     const ref='PPP-'+String(b.date||'').replace(/-/g,'').slice(2)+'-'+String(b.id||'').replace(/-/g,'').slice(0,4).toUpperCase();
     const box=el('div',{class:'item'});
-    box.appendChild(el('div',{html:`<b>${esc(ref)}</b> &middot; <b>${esc(b.date)}</b> &middot; ${esc(b.slot)} &middot; ${esc(b.name||'')} &middot; ${esc(b.phone||'')} &middot; ${esc(b.email||'')} &middot; ${esc(b.dogs)} dog(s)${b.amount!=null?(' &middot; €'+esc(b.amount)):''} &middot; <span class="pill">${esc(b.status)}</span>`}));
+    box.appendChild(el('div',{html:`<b>${esc(ref)}</b> &middot; <b>${esc(b.date)}</b> &middot; ${esc(b.slot)} &middot; ${esc(b.name||'')} &middot; ${esc(b.phone||'')} &middot; ${esc(b.email||'')} &middot; ${esc(b.dogs)} dog(s)${b.amount!=null?(' &middot; €'+esc(b.amount)):''}${b.payment_method?(' &middot; 💳 '+esc(b.payment_method)):''} &middot; <span class="pill">${esc(b.status)}</span>`}));
     const row=el('div',{class:'row',style:'margin-top:8px'});
     row.appendChild(el('button',{class:'btn btn-blue btn-sm',onclick:async()=>{ await api('update-booking',{id:b.id,booking:{status:'confirmed'}}); b.status='confirmed'; render(); }},['Mark confirmed']));
     row.appendChild(el('button',{class:'btn btn-light btn-sm',onclick:async()=>{ await api('update-booking',{id:b.id,booking:{status:'cancelled'}}); b.status='cancelled'; render(); }},['Mark cancelled']));
