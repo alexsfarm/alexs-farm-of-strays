@@ -14,15 +14,25 @@ export default async (req) => {
   const name = String(b.name || '').trim(), phone = String(b.phone || '').trim(), email = String(b.email || '').trim();
   const dogs = parseInt(b.dogs, 10) || 1;
   const amount = (b.amount != null && b.amount !== '') ? Number(b.amount) : null;
+  const payment = String(b.payment || '').trim();
   if (!date || !slot || !name || !phone || !email) return json({ error: 'Please fill in all fields.' }, 400);
 
   const H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' };
-  const row = { date, slot, dogs, name, phone, email, amount, currency: 'eur', status: 'requested' };
+  const row = { date, slot, dogs, name, phone, email, amount, currency: 'eur', status: 'requested', payment_method: payment || null };
+
+  // Send a row to park_bookings. If the optional `payment_method` column hasn't
+  // been added yet, transparently retry without it so bookings never break.
+  async function send(method, url, body) {
+    let res = await fetch(url, { method, headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(body) });
+    if (!res.ok && res.status !== 409 && body.payment_method !== undefined) {
+      const t = await res.clone().text();
+      if (/payment_method/i.test(t)) { const b2 = { ...body }; delete b2.payment_method; res = await fetch(url, { method, headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(b2) }); }
+    }
+    return res;
+  }
 
   // Insert. The unique(date,slot) constraint is what holds the slot.
-  let r = await fetch(`${SB}/rest/v1/park_bookings`, {
-    method: 'POST', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(row)
-  });
+  let r = await send('POST', `${SB}/rest/v1/park_bookings`, row);
 
   // 409 = a row already exists for this slot. Re-use it only if it was
   // cancelled (slot was freed); otherwise the slot is genuinely taken.
@@ -31,9 +41,7 @@ export default async (req) => {
     const rows = ex.ok ? await ex.json() : [];
     const cur = Array.isArray(rows) && rows[0];
     if (cur && cur.status === 'cancelled') {
-      r = await fetch(`${SB}/rest/v1/park_bookings?id=eq.${encodeURIComponent(cur.id)}`, {
-        method: 'PATCH', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(row)
-      });
+      r = await send('PATCH', `${SB}/rest/v1/park_bookings?id=eq.${encodeURIComponent(cur.id)}`, row);
     } else {
       return json({ error: 'slot_taken' }, 409);
     }
