@@ -387,7 +387,7 @@
     <p class="lead reveal d1" style="margin-bottom:28px" data-txt="animals.lead">A few of the dogs and cats currently in our care.</p>
     <div class="grid cards" id="animals-grid"></div>
     <p class="center reveal" style="margin-top:30px">
-      <a class="btn btn-ghost" href="#contact" data-txt="animals.fbBtn">See more on our Facebook page</a></p>
+      <a class="btn btn-ghost" id="animals-fb" href="#contact" data-txt="animals.fbBtn">See more on our Facebook page</a></p>
   </div>
 </section>
 
@@ -448,6 +448,10 @@
           <div class="field">
             <label for="bk-email">Email</label>
             <input type="email" id="bk-email" placeholder="you@example.com" required>
+          </div>
+          <div class="field" id="bk-pay-field" style="display:none">
+            <label for="bk-pay">How will you pay?</label>
+            <select id="bk-pay"></select>
           </div>
           <div class="price-row">
             <span>Total</span>
@@ -611,6 +615,9 @@
     renderStats(); renderStory(); renderSteps(); renderHelp(); renderPark(); renderDonate(); renderContact();
     const hl=document.getElementById('hero-lead'); if(hl&&CFG.strapline) hl.textContent=CFG.strapline;
     const sb=document.querySelector('#bookingForm button[type=submit]'); if(sb) sb.textContent=stripeOn()?'Book & pay':'Request booking';
+    const afb=document.getElementById('animals-fb'); if(afb&&CFG.facebookRescue){ afb.href=CFG.facebookRescue; afb.target='_blank'; afb.rel='noopener'; }
+    const pay=document.getElementById('bk-pay'), payField=document.getElementById('bk-pay-field');
+    if(pay&&payField){ const ms=donateList().map(m=>m.label).filter(Boolean); if(ms.length&&!stripeOn()){ pay.innerHTML='<option value="">Please choose…</option>'+ms.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('')+'<option value="Not sure yet">Not sure yet</option>'; payField.style.display=''; } else payField.style.display='none'; }
   }
   function loadSettings(){
     if(!sbOn()) return;
@@ -680,7 +687,7 @@
     const a=document.getElementById('park-address'); if(a) a.textContent=p.address||'';
     const h=document.getElementById('park-hours'); if(h) h.textContent=seas.hours||p.hours||'';
     const slot=document.getElementById('bk-slot'); const slots=seas.slots||p.slots||[];
-    if(slot) slot.innerHTML='<option value="">Choose a time…</option>'+slots.map(s=>`<option>${esc(s)}</option>`).join('');
+    if(slot) slot.innerHTML='<option value="">Choose a time…</option>'+slots.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
     const dogs=document.getElementById('bk-dogs'); const max=p.maxDogs||1;
     if(dogs){ let o=''; for(let i=1;i<=max;i++) o+=`<option value="${i}">${i} ${i===1?'dog':'dogs'}</option>`; dogs.innerHTML=o; }
     updatePrice();
@@ -728,7 +735,7 @@
 
   function submitBooking(e){
     e.preventDefault();
-    const date=val('bk-date'),slot=val('bk-slot'),dogs=val('bk-dogs'),name=val('bk-name').trim(),phone=val('bk-phone').trim(),email=val('bk-email').trim();
+    const date=val('bk-date'),slot=val('bk-slot'),dogs=val('bk-dogs'),name=val('bk-name').trim(),phone=val('bk-phone').trim(),email=val('bk-email').trim(),pay=val('bk-pay');
     if(!date||!slot||!name||!phone||!email){ alert('Please fill in all the fields, including your email.'); return false; }
     const dEl=document.getElementById('bk-date');
     if(dEl&&dEl.min&&date<dEl.min){ const hrs=(CFG.park&&CFG.park.minNoticeHours)||24; alert('Please choose a date at least '+hrs+' hours from now.'); return false; }
@@ -743,11 +750,11 @@
     // No Stripe: save the request (holds the slot + gives a reference), then
     // show a confirmation with a one-tap WhatsApp message so Alex can confirm.
     const num=(CFG.whatsapp||'').replace(/\D/g,'');
-    const waMsg=ref=>`Hi! I'd like to book Paphos Paws Park 🐾%0A%0A${ref?('Ref: '+ref+'%0A'):''}Name: ${name}%0APhone: ${phone}%0AEmail: ${email}%0ADate: ${date}%0ATime: ${slot}%0ADogs: ${dogs}%0ATotal: ${curr()}${total}`;
+    const waMsg=ref=>`Hi! I'd like to book Paphos Paws Park 🐾%0A%0A${ref?('Ref: '+ref+'%0A'):''}Name: ${name}%0APhone: ${phone}%0AEmail: ${email}%0ADate: ${date}%0ATime: ${slot}%0ADogs: ${dogs}%0ATotal: ${curr()}${total}${pay?('%0APayment: '+pay):''}`;
     const note=document.getElementById('bk-note');
     const btn=e.target.querySelector('button[type=submit]'); if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
     const reset=()=>{ if(btn){ btn.disabled=false; btn.textContent='Request booking'; } };
-    fetch('/api/request-booking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,slot,dogs,name,phone,email,amount:total})})
+    fetch('/api/request-booking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,slot,dogs,name,phone,email,amount:total,payment:pay})})
       .then(r=>r.json().then(d=>({status:r.status,d})).catch(()=>({status:r.status,d:{}})))
       .then(({status,d})=>{
         reset();
