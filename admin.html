@@ -140,6 +140,12 @@ const DEFAULT_HELP = [
   {icon:'📣',title:'Share',text:'Follow and share our posts. A single share can be the reason an animal finds their home.',btn:'Follow us',href:'#contact'},
   {icon:'🌳',title:'Visit the park',text:'Let your dog enjoy some private playtime while helping support our rescue work.',btn:'Book the park',href:'#park'}
 ];
+const DEFAULT_EMAILS = {
+  request: { subject: "Thank you for your Paphos Paws Park booking request 🐾",
+    body: "Hi 👋\n\nThank you for choosing Paphos Paws Park and for supporting Alex's Farm.\n\nTo reserve your requested time slot, please donate via your selected method or one of the options in the \"Ways to donate\" section on our homepage.\n\nTo help us identify your donation, please use this reference:\n{name} Donation\n(Example: John Smith Donation)\n\nOnce your donation has been made, simply send us a screenshot or receipt and we'll confirm your visit.\n\nPlease note: requested time slots are held for up to 2 hours. If we don't receive confirmation within that time, the slot may be released for other supporters and their dogs.\n\nYour gate access code will be sent approximately 2 hours before your visit.\n\nThank you for supporting Alex's Farm. Every donation helps us continue our rescue and animal welfare work. 🐾❤️" },
+  confirmed: { subject: "Your Paphos Paws Park visit is confirmed ✅",
+    body: "Thank you ❤️\n\nWe have received your donation and your visit to Paphos Paws Park is now confirmed.\n\n📅 Date: {date}\n🕒 Time: {time}\n📍 Location: https://maps.app.goo.gl/ZfqgSkTSi1ZyyuK26?g_st=ic\n\nYour gate access code and arrival information will be sent before your visit.\n\nThank you for supporting Alex's Farm. 🐾" }
+};
 
 /* ---------- API ---------- */
 async function api(action, payload){
@@ -222,6 +228,8 @@ async function loadAll(){
   }
   if(!S.helpCards.length) S.helpCards = DEFAULT_HELP.map(o=>Object.assign({},o));
   deepFill(S.park, C.park||{});
+  S.emails = S.emails || {};
+  ['request','confirmed'].forEach(k=>{ if(!S.emails[k] || !S.emails[k].body) S.emails[k]=Object.assign({}, DEFAULT_EMAILS[k]); });
   try{ A = await api('list-animals') || []; }catch(e){ A = []; }
   if(!Array.isArray(A)) A = [];
   try{ B = await api('list-bookings') || []; }catch(e){ B = []; }
@@ -270,7 +278,7 @@ function selectField(label, value, options, onInput){
 /* ---------- tabs ---------- */
 const TABS = [
   ['content','📝 Content & text'],['design','🎨 Design'],['animals','🐾 Animals'],
-  ['donate','💳 Donations'],['links','🔗 Links & social'],['park','🎾 Park & booking'],['bookings','📅 Bookings']
+  ['donate','💳 Donations'],['links','🔗 Links & social'],['park','🎾 Park & booking'],['emails','📧 Emails'],['bookings','📅 Bookings']
 ];
 function buildTabs(){
   const t=document.getElementById('tabs'); t.innerHTML='';
@@ -283,7 +291,7 @@ function render(){
   const p=document.getElementById('panel'); p.innerHTML='';
   const sb=document.getElementById('savebar');
   sb.classList.toggle('hide', TAB==='animals'||TAB==='bookings');   // those save per-row
-  ({content:renderContent, design:renderDesign, animals:renderAnimals, donate:renderDonate, links:renderLinks, park:renderPark, bookings:renderBookings}[TAB])(p);
+  ({content:renderContent, design:renderDesign, animals:renderAnimals, donate:renderDonate, links:renderLinks, park:renderPark, emails:renderEmails, bookings:renderBookings}[TAB])(p);
 }
 
 /* ===== CONTENT ===== */
@@ -594,6 +602,20 @@ function renderPark(p){
   lg.appendChild(inputField('Send code how many hours before?', k.access.codeLeadHours!=null?k.access.codeLeadHours:2, v=> k.access.codeLeadHours=parseInt(v,10)||2, {type:'number',min:0}));
   lc.appendChild(lg);
   p.appendChild(lc);
+}
+
+/* ===== EMAILS ===== */
+function renderEmails(p){
+  p.appendChild(el('div',{class:'note'},['These messages are sent automatically once email is connected. Edit the wording below — you can use {name}, {date} and {time} anywhere and they are filled in for each booking. Press "Save content & design" after editing.']));
+  S.emails = S.emails || {};
+  [['request','① Sent after a booking request is submitted'],['confirmed','② Sent after you mark a booking "confirmed"']].forEach(([key,title])=>{
+    S.emails[key]=S.emails[key]||{};
+    const c=el('div',{class:'card'}); c.appendChild(el('h3',{},[title]));
+    c.appendChild(inputField('Subject line', S.emails[key].subject||'', v=> S.emails[key].subject=v));
+    c.appendChild(inputField('Message', S.emails[key].body||'', v=> S.emails[key].body=v, {tag:'textarea'}));
+    p.appendChild(c);
+  });
+  p.appendChild(el('p',{class:'muted'},['Coming in the next phase: the pre-arrival message (with the gate code) and the post-visit thank-you.']));
 }
 
 /* ===== BOOKINGS ===== */
