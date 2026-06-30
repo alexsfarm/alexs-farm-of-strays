@@ -231,6 +231,23 @@
   @keyframes lbIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
   @media(prefers-reduced-motion:reduce){.lightbox figure{animation:none}}
 
+  /* Park photo gallery / carousel */
+  .park-gallery{position:relative;margin-top:22px;border-radius:16px;overflow:hidden;background:rgba(255,255,255,.06);box-shadow:0 12px 32px rgba(0,0,0,.28)}
+  .pg-track{position:relative;width:100%;aspect-ratio:4/3}
+  .pg-slide{position:absolute;inset:0;opacity:0;transition:opacity .5s var(--ease);background:#0e2236}
+  .pg-slide.on{opacity:1}
+  .pg-slide img{width:100%;height:100%;object-fit:cover;cursor:zoom-in;transition:transform .45s var(--ease)}
+  .park-gallery:hover .pg-slide.on img{transform:scale(1.06)}
+  .pg-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:42px;height:42px;border-radius:50%;border:0;cursor:pointer;
+     background:rgba(0,0,0,.45);color:#fff;font-size:1.5rem;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .2s,transform .2s}
+  .pg-arrow:hover{background:rgba(0,0,0,.72);transform:translateY(-50%) scale(1.08)}
+  .pg-prev{left:10px}.pg-next{right:10px}
+  .pg-dots{position:absolute;left:0;right:0;bottom:10px;z-index:3;display:flex;gap:7px;justify-content:center}
+  .pg-dot{width:9px;height:9px;border-radius:50%;border:0;padding:0;cursor:pointer;background:rgba(255,255,255,.45);transition:background .2s}
+  .pg-dot.on{background:#fff}
+  .pg-placeholder{aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#c7d6e3;text-align:center;padding:20px}
+  .pg-placeholder .pg-ico{font-size:2.4rem;opacity:.85}
+
   .help-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:30px 24px;text-align:center;
      transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
   .help-card:hover{transform:translateY(-8px);box-shadow:var(--shadow-lg)}
@@ -416,6 +433,7 @@
         <ul class="feature-list" id="park-features"></ul>
         <p class="note" style="color:#c7d6e3">📍 <span id="park-address"></span>
           &nbsp;·&nbsp; 🕘 <span id="park-hours"></span></p>
+        <div class="park-gallery" id="park-gallery"></div>
       </div>
 
       <!-- Booking widget -->
@@ -612,7 +630,7 @@
   }
   function renderAll(){
     applyTheme(CFG.theme); applyText(CFG.text);
-    renderStats(); renderStory(); renderSteps(); renderHelp(); renderPark(); renderDonate(); renderContact();
+    renderStats(); renderStory(); renderSteps(); renderHelp(); renderPark(); renderParkGallery(); renderDonate(); renderContact();
     const hl=document.getElementById('hero-lead'); if(hl&&CFG.strapline) hl.textContent=CFG.strapline;
     const sb=document.querySelector('#bookingForm button[type=submit]'); if(sb) sb.textContent=stripeOn()?'Book & pay':'Request booking';
     const afb=document.getElementById('animals-fb'); if(afb&&CFG.facebookRescue){ afb.href=CFG.facebookRescue; afb.target='_blank'; afb.rel='noopener'; }
@@ -699,6 +717,24 @@
     if(fn) fn.textContent=p.fundsMessage||'Every booking helps fund food and vet care for our rescue animals — thank you! 🐾';
     const hint=document.getElementById('bk-date-hint');
     if(hint) hint.textContent='Please book at least '+(p.minNoticeHours||24)+' hours in advance.';
+  }
+  function renderParkGallery(){
+    const host=document.getElementById('park-gallery'); if(!host) return;
+    if(host._pgTimer){ clearInterval(host._pgTimer); host._pgTimer=null; }
+    const photos=(((CFG.park||{}).gallery)||[]).map(g=> typeof g==='string'?g:(g&&g.url)).filter(Boolean);
+    if(!photos.length){ host.innerHTML='<div class="pg-placeholder"><div class="pg-ico">📷</div><b>Photos of the park coming soon</b><span class="note">A glimpse of Paphos Paws Park will appear here.</span></div>'; return; }
+    let i=0;
+    host.innerHTML='<div class="pg-track">'+photos.map((src,n)=>`<div class="pg-slide${n===0?' on':''}"><img class="zoomable" src="${esc(src)}" data-name="Paphos Paws Park" alt="Paphos Paws Park photo ${n+1}"></div>`).join('')+'</div>'
+      +(photos.length>1?('<button class="pg-arrow pg-prev" type="button" aria-label="Previous photo">‹</button><button class="pg-arrow pg-next" type="button" aria-label="Next photo">›</button><div class="pg-dots">'+photos.map((_,n)=>`<button class="pg-dot${n===0?' on':''}" type="button" aria-label="Show photo ${n+1}"></button>`).join('')+'</div>'):'');
+    const slideEls=host.querySelectorAll('.pg-slide'), dotEls=host.querySelectorAll('.pg-dot');
+    const show=n=>{ i=(n+photos.length)%photos.length; slideEls.forEach((s,k)=>s.classList.toggle('on',k===i)); dotEls.forEach((d,k)=>d.classList.toggle('on',k===i)); };
+    const prev=host.querySelector('.pg-prev'), next=host.querySelector('.pg-next');
+    if(prev) prev.addEventListener('click',()=>show(i-1));
+    if(next) next.addEventListener('click',()=>show(i+1));
+    dotEls.forEach((d,k)=>d.addEventListener('click',()=>show(k)));
+    const stop=()=>{ if(host._pgTimer){ clearInterval(host._pgTimer); host._pgTimer=null; } };
+    const start=()=>{ if(photos.length>1 && !reduce){ stop(); host._pgTimer=setInterval(()=>show(i+1),5000); } };
+    host.onmouseenter=stop; host.onmouseleave=start; start();
   }
   function renderDonate(){
     const g=document.getElementById('donate-methods'); if(!g) return;
