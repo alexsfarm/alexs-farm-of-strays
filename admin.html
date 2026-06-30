@@ -144,7 +144,11 @@ const DEFAULT_EMAILS = {
   request: { subject: "Thank you for your Paphos Paws Park booking request 🐾",
     body: "Hi 👋\n\nThank you for choosing Paphos Paws Park and for supporting Alex's Farm.\n\nTo reserve your requested time slot, please donate via your selected method or one of the options in the \"Ways to donate\" section on our homepage.\n\nTo help us identify your donation, please use this reference:\n{name} Donation\n(Example: John Smith Donation)\n\nOnce your donation has been made, simply send us a screenshot or receipt and we'll confirm your visit.\n\nPlease note: requested time slots are held for up to 2 hours. If we don't receive confirmation within that time, the slot may be released for other supporters and their dogs.\n\nYour gate access code will be sent approximately 2 hours before your visit.\n\nThank you for supporting Alex's Farm. Every donation helps us continue our rescue and animal welfare work. 🐾❤️" },
   confirmed: { subject: "Your Paphos Paws Park visit is confirmed ✅",
-    body: "Thank you ❤️\n\nWe have received your donation and your visit to Paphos Paws Park is now confirmed.\n\n📅 Date: {date}\n🕒 Time: {time}\n📍 Location: https://maps.app.goo.gl/ZfqgSkTSi1ZyyuK26?g_st=ic\n\nYour gate access code and arrival information will be sent before your visit.\n\nThank you for supporting Alex's Farm. 🐾" }
+    body: "Thank you ❤️\n\nWe have received your donation and your visit to Paphos Paws Park is now confirmed.\n\n📅 Date: {date}\n🕒 Time: {time}\n📍 Location: https://maps.app.goo.gl/ZfqgSkTSi1ZyyuK26?g_st=ic\n\nYour gate access code and arrival information will be sent before your visit.\n\nThank you for supporting Alex's Farm. 🐾" },
+  prearrival: { subject: "Your Paphos Paws Park visit — arrival details & gate code 🔑",
+    body: "Hi 👋\n\nYour visit to Paphos Paws Park is coming up soon.\n\n📍 Location: https://maps.app.goo.gl/ZfqgSkTSi1ZyyuK26?g_st=ic\n\n🔑 Gate Access Code: {code}\nThis code can be used for both the main property gate and the enclosed park gate.\n\nPlease use the code to open the main property gate and ensure it is fully closed behind you immediately after entering. This helps maintain your privacy during your session and prevents unauthorised access to the property by people or vehicles.\n\nDogs must remain on lead until they are safely inside the enclosed park area. Once inside the park, please close the park gate behind you before allowing your dogs off lead.\n\nWhen leaving, please ensure both the property gate and the park gate are securely closed behind you.\n\nBefore your visit, please note:\n\n🐕 Safety\n• By visiting Paphos Paws Park, you confirm that all attending dogs are up to date with their routine vaccinations.\n• Dogs must remain on lead from your vehicle until they are safely inside the enclosed park area.\n• The area between the property gate and the enclosed park is not fully fenced.\n• There are stray cats, wildlife, weeds and other potential hazards in the surrounding area.\n• Dogs must not be allowed off lead outside the enclosed park area.\n• Owners are fully responsible for the safety and behaviour of their dogs throughout their visit.\n• If you choose to park outside the property, you do so at your own risk.\n\n🎾 Equipment & Facilities\n• The shed is unlocked for visitors and contains additional equipment, first aid kits and other items for your convenience. Please return everything to its original place before leaving.\n• Water bowls are available for use during your visit. A water tap is also available should they need refilling.\n• Toys, equipment and other items provided at the park are for everyone to enjoy and must remain on site.\n• Additional training equipment is available in the shed. You are welcome to use it, but please return everything to where you found it.\n• Dog treats may be available. Please be considerate so all visiting dogs have the opportunity to enjoy them.\n• A small radio is available if you would like to listen to music during your visit. Please return it to its place before leaving.\n• Agility equipment and park structures should not be moved.\n\n🧹 Keeping the Park Clean\n• Please pick up after your dogs and yourselves.\n• There are more than enough bins provided throughout the park.\n• Food, drinks, smoking and vaping are permitted. Please use the bins provided and leave the park as you found it.\n• Cigarette ends must be disposed of responsibly and extra care should be taken during dry weather due to the risk of fire.\n• Before leaving, please ensure you have all personal belongings with you.\n\n⏰ General\n• If you arrive late, your session will still end at the scheduled finish time.\n• Please do not share gate access codes with others.\n• If any equipment, fencing, gates or facilities are accidentally damaged, please let us know so we can repair or replace them.\n• Unfortunately, toilet facilities are not available on site.\n• Please ensure the shed door is securely closed before leaving.\n\n🚨 Emergencies\n• A first aid kit for both humans and dogs is available in the shed.\n• If you use any items from the first aid kits, please let us know so they can be replenished for future visitors.\n• An emergency information sheet is available on site containing useful contact numbers, including local vet clinics, police, fire services, the Cyprus Herpetological Team and Alex's Farm.\n\nWe hope you and your dogs have a wonderful visit and enjoy having the park all to yourselves! 🐾\nThank you for supporting Alex's Farm ❤️" },
+  postvisit: { subject: "Thank you for visiting Paphos Paws Park 🐾",
+    body: "Hi 👋\n\nThank you for visiting Paphos Paws Park today.\n\nWe hope you and your dog(s) enjoyed having the park all to yourselves and had a wonderful time.\n\nYour support helps Alex's Farm continue rescuing and caring for animals in need, and we truly appreciate it ❤️\n\nAs this is a new project, we will continue improving and adding to the park as we go. If you have any feedback, suggestions or notice anything that needs attention, we'd love to hear from you.\n\nIf you took any photos or videos during your visit, we'd love to see them. Feel free to send them to us or tag us on social media so we can share them too.\n\nWe hope to welcome you and your dog(s) back again soon! 🐾\nThank you for supporting Alex's Farm." }
 };
 
 /* ---------- API ---------- */
@@ -229,7 +233,7 @@ async function loadAll(){
   if(!S.helpCards.length) S.helpCards = DEFAULT_HELP.map(o=>Object.assign({},o));
   deepFill(S.park, C.park||{});
   S.emails = S.emails || {};
-  ['request','confirmed'].forEach(k=>{ if(!S.emails[k] || !S.emails[k].body) S.emails[k]=Object.assign({}, DEFAULT_EMAILS[k]); });
+  ['request','confirmed','prearrival','postvisit'].forEach(k=>{ if(!S.emails[k] || !S.emails[k].body) S.emails[k]=Object.assign({}, DEFAULT_EMAILS[k]); });
   try{ A = await api('list-animals') || []; }catch(e){ A = []; }
   if(!Array.isArray(A)) A = [];
   try{ B = await api('list-bookings') || []; }catch(e){ B = []; }
@@ -606,16 +610,19 @@ function renderPark(p){
 
 /* ===== EMAILS ===== */
 function renderEmails(p){
-  p.appendChild(el('div',{class:'note'},['These messages are sent automatically once email is connected. Edit the wording below — you can use {name}, {date} and {time} anywhere and they are filled in for each booking. Press "Save content & design" after editing.']));
+  p.appendChild(el('div',{class:'note'},['These messages are sent automatically. Edit the wording below — you can use {name}, {date} and {time} anywhere (and {code} in the pre-arrival message for the gate code); they are filled in for each booking. Press "Save content & design" after editing.']));
   S.emails = S.emails || {};
-  [['request','① Sent after a booking request is submitted'],['confirmed','② Sent after you mark a booking "confirmed"']].forEach(([key,title])=>{
+  [['request','① Sent after a booking request is submitted'],
+   ['confirmed','② Sent after you mark a booking "confirmed"'],
+   ['prearrival','③ Sent automatically ~2 hours before the visit (includes the gate code)'],
+   ['postvisit','④ Sent automatically ~1 hour after the visit ends']].forEach(([key,title])=>{
     S.emails[key]=S.emails[key]||{};
     const c=el('div',{class:'card'}); c.appendChild(el('h3',{},[title]));
     c.appendChild(inputField('Subject line', S.emails[key].subject||'', v=> S.emails[key].subject=v));
     c.appendChild(inputField('Message', S.emails[key].body||'', v=> S.emails[key].body=v, {tag:'textarea'}));
     p.appendChild(c);
   });
-  p.appendChild(el('p',{class:'muted'},['Coming in the next phase: the pre-arrival message (with the gate code) and the post-visit thank-you.']));
+  p.appendChild(el('p',{class:'muted'},['Note: the pre-arrival email (③) only sends once you have entered a gate code in the Park & Booking tab.']));
 }
 
 /* ===== BOOKINGS ===== */
