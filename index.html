@@ -450,7 +450,7 @@
             <input type="email" id="bk-email" placeholder="you@example.com" required>
           </div>
           <div class="field" id="bk-pay-field" style="display:none">
-            <label for="bk-pay">How will you pay?</label>
+            <label for="bk-pay">How would you like to donate?</label>
             <select id="bk-pay"></select>
           </div>
           <div class="price-row">
@@ -750,7 +750,7 @@
     // No Stripe: save the request (holds the slot + gives a reference), then
     // show a confirmation with a one-tap WhatsApp message so Alex can confirm.
     const num=(CFG.whatsapp||'').replace(/\D/g,'');
-    const waMsg=ref=>`Hi! I'd like to book Paphos Paws Park 🐾%0A%0A${ref?('Ref: '+ref+'%0A'):''}Name: ${name}%0APhone: ${phone}%0AEmail: ${email}%0ADate: ${date}%0ATime: ${slot}%0ADogs: ${dogs}%0ATotal: ${curr()}${total}${pay?('%0APayment: '+pay):''}`;
+    const waMsg=ref=>`Hi! I'd like to book Paphos Paws Park 🐾%0A%0A${ref?('Ref: '+ref+'%0A'):''}Name: ${name}%0APhone: ${phone}%0AEmail: ${email}%0ADate: ${date}%0ATime: ${slot}%0ADogs: ${dogs}%0ATotal: ${curr()}${total}${pay?('%0ADonating via: '+pay):''}`;
     const note=document.getElementById('bk-note');
     const btn=e.target.querySelector('button[type=submit]'); if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
     const reset=()=>{ if(btn){ btn.disabled=false; btn.textContent='Request booking'; } };
