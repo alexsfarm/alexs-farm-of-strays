@@ -85,7 +85,13 @@ export default async (req) => {
       const r = await fetch(`${SB}/rest/v1/park_bookings?id=eq.${encodeURIComponent(body.id)}`, {
         method: 'PATCH', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(body.booking || {})
       });
-      return json(await r.json());
+      const rows = await r.json();
+      const row = Array.isArray(rows) && rows[0];
+      // Transactional email #2 (donation confirmed). Dormant until RESEND_API_KEY is set.
+      if (row && row.status === 'confirmed' && row.email) {
+        await sendBookingEmail(SB, H, row.email, 'confirmed', { name: row.name, date: row.date, time: row.slot, dogs: row.dogs });
+      }
+      return json(rows);
     }
     if (action === 'delete-booking') {
       await fetch(`${SB}/rest/v1/park_bookings?id=eq.${encodeURIComponent(body.id)}`, { method: 'DELETE', headers: H });
@@ -102,4 +108,30 @@ export const config = { path: '/api/admin' };
 
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json' } });
+}
+
+// Send a booking email via Resend, using the (admin-editable) template stored in
+// site_settings, with a built-in fallback. Stays dormant until RESEND_API_KEY is set.
+async function sendBookingEmail(SB, H, to, key, vars) {
+  const RK = process.env.RESEND_API_KEY; if (!RK || !to) return;
+  const FROM = process.env.EMAIL_FROM || 'Paphos Paws Park <noreply@alexsfarm.org>';
+  let tpl = null;
+  try {
+    const r = await fetch(`${SB}/rest/v1/site_settings?id=eq.main&select=data`, { headers: H });
+    const rows = await r.json();
+    tpl = rows && rows[0] && rows[0].data && rows[0].data.emails && rows[0].data.emails[key];
+  } catch {}
+  const FALLBACK = {
+    request:   { subject: 'Your Paphos Paws Park booking request 🐾', body: "Hi!\n\nThanks for your booking request for Paphos Paws Park. Please make your donation to reserve your slot, then reply with a screenshot or receipt and we'll confirm your visit.\n\nThank you for supporting Alex's Farm. 🐾" },
+    confirmed: { subject: 'Your Paphos Paws Park visit is confirmed ✅', body: "Your visit to Paphos Paws Park is confirmed.\n\nDate: {date}\nTime: {time}\n\nWe'll send your gate code before your visit. Thank you for supporting Alex's Farm! 🐾" }
+  };
+  const t = (tpl && tpl.body) ? tpl : (FALLBACK[key] || { subject: 'Paphos Paws Park', body: '' });
+  const fill = s => String(s || '').replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + RK, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM, to, subject: fill(t.subject), text: fill(t.body) })
+    });
+  } catch {}
 }
