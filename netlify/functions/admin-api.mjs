@@ -43,19 +43,35 @@ export default async (req) => {
 
     // ---- Site settings (all editable text/theme/content) ------------------
     if (action === 'get-settings') {
-      const r = await fetch(`${SB}/rest/v1/site_settings?id=eq.main&select=data`, { headers: H });
+      const r = await fetch(`${SB}/rest/v1/site_settings?id=eq.main&select=data,updated_at`, { headers: H });
+      if (!r.ok) return json({ error: 'Could not load settings (database read failed).' }, 502);
       const rows = await r.json();
-      return json((Array.isArray(rows) && rows[0] && rows[0].data) || {});
+      if (!Array.isArray(rows)) return json({ error: 'Could not load settings.' }, 502);
+      const row = rows[0] || {};
+      return json({ data: row.data || {}, ts: row.updated_at || null });
     }
     if (action === 'save-settings') {
+      // Optimistic lock: if the editor loaded a specific version (baseTs), make
+      // sure the DB hasn't changed since — stops a stale/second tab from
+      // overwriting newer data. Compared by instant, so timestamp format differences don't matter.
+      if (body.baseTs) {
+        const cur = await fetch(`${SB}/rest/v1/site_settings?id=eq.main&select=updated_at`, { headers: H });
+        const rows = cur.ok ? await cur.json() : null;
+        const curTs = Array.isArray(rows) && rows[0] && rows[0].updated_at;
+        const a = Date.parse(curTs), b = Date.parse(body.baseTs);
+        if (!isNaN(a) && !isNaN(b) && a !== b) {
+          return json({ error: 'Your content was changed in another tab or on another device since you opened this page. Please refresh before saving.' }, 409);
+        }
+      }
       // Upsert the single 'main' row.
+      const ts = new Date().toISOString();
       const r = await fetch(`${SB}/rest/v1/site_settings`, {
         method: 'POST',
         headers: { ...H, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify({ id: 'main', data: body.settings || {}, updated_at: new Date().toISOString() })
+        body: JSON.stringify({ id: 'main', data: body.settings || {}, updated_at: ts })
       });
       if (!r.ok) return json({ error: 'save failed: ' + (await r.text()) }, 500);
-      return json({ ok: true });
+      return json({ ok: true, ts });
     }
 
     // ---- Animal photo upload / delete (Supabase Storage) ------------------
