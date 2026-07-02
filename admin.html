@@ -96,6 +96,7 @@ let S = {};          // site settings (text/theme/content)
 let A = [];          // animals (from the animals table)
 let B = [];          // bookings
 let TAB = 'content';
+let LOADED = false, BASE_TS = null;   // save-guard: only allow saving once the real settings have loaded
 
 /* ---------- defaults (shown when a field hasn't been customised) ---------- */
 const TXT_GROUPS = [
@@ -179,6 +180,7 @@ async function enterApp(){
   document.getElementById('savebar').classList.remove('hide');
   document.getElementById('health').innerHTML = 'Database: <b>connected ✓</b> — your changes are saved online and shown on the public site.';
   await loadAll();
+  if(!LOADED) document.getElementById('health').innerHTML = '⚠️ <b>Could not load your saved content — saving is disabled to protect it. Please refresh the page.</b>';
   buildTabs();
   render();
 }
@@ -197,7 +199,8 @@ function deepFill(target, src){
   return target;
 }
 async function loadAll(){
-  try{ S = await api('get-settings') || {}; }catch(e){ S = {}; }
+  try{ const res = await api('get-settings'); S = (res && res.data!==undefined ? res.data : res) || {}; BASE_TS = (res && res.ts) || null; LOADED = true; }
+  catch(e){ S = {}; LOADED = false; }
   if(typeof S !== 'object' || S === null) S = {};
   S.text = S.text || {};
   S.theme = S.theme || {}; S.theme.colors = S.theme.colors || {};
@@ -240,8 +243,14 @@ async function loadAll(){
   if(!Array.isArray(B)) B = [];
 }
 
+async function persistSettings(){
+  if(!LOADED) throw new Error('Could not load your saved content — please refresh the page before saving.');
+  const res = await api('save-settings', {settings:S, baseTs:BASE_TS});
+  BASE_TS = (res && res.ts) || BASE_TS;
+  return res;
+}
 async function saveSettings(){
-  try{ await api('save-settings', {settings:S}); toast('Saved ✓  Refresh your website to see the changes.'); }
+  try{ await persistSettings(); toast('Saved ✓  Refresh your website to see the changes.'); }
   catch(e){ toast('Could not save: '+(e.message||'unknown error'), true); }
 }
 function toast(msg, bad){
@@ -523,7 +532,7 @@ async function uploadParkPhoto(file){
   try{
     const {dataB64,contentType}=await downscale(file);
     const res=await api('upload-photo',{filename:(file.name||'park.jpg'), contentType, dataB64});
-    if(res&&res.publicUrl){ S.park.gallery=Array.isArray(S.park.gallery)?S.park.gallery:[]; S.park.gallery.push({url:res.publicUrl, path:res.path}); await api('save-settings',{settings:S}); toast('Photo added ✓'); render(); }
+    if(res&&res.publicUrl){ S.park.gallery=Array.isArray(S.park.gallery)?S.park.gallery:[]; S.park.gallery.push({url:res.publicUrl, path:res.path}); await persistSettings(); toast('Photo added ✓'); render(); }
     else toast('Upload failed: '+((res&&res.error)||'unknown'), true);
   }catch(e){ toast('Upload failed: '+(e.message||'unknown'), true); }
 }
@@ -532,11 +541,11 @@ async function removeParkPhoto(i){
   if(!confirm('Delete this park photo?')) return;
   const path=(g&&typeof g==='object'&&g.path)?g.path:pathFromUrl(typeof g==='string'?g:(g&&g.url));
   if(path) await api('delete-photo',{path}).catch(()=>{});
-  a.splice(i,1); await api('save-settings',{settings:S}); toast('Photo deleted'); render();
+  a.splice(i,1); await persistSettings(); toast('Photo deleted'); render();
 }
 async function moveParkPhoto(i,dir){
   const a=S.park.gallery||[]; const j=i+dir; if(j<0||j>=a.length) return;
-  const t=a[i]; a[i]=a[j]; a[j]=t; await api('save-settings',{settings:S}); render();
+  const t=a[i]; a[i]=a[j]; a[j]=t; await persistSettings(); render();
 }
 function renderPark(p){
   const k=S.park;
