@@ -70,12 +70,15 @@ function json(o, s = 200) {
 export async function sendBookingEmail(SB, H, to, key, vars) {
   const RK = process.env.RESEND_API_KEY; if (!RK || !to) return;
   const FROM = process.env.EMAIL_FROM || 'Paphos Paws Park <noreply@alexsfarm.org>';
-  let tpl = null;
+  let tpl = null, hold = 2;
   try {
     const r = await fetch(`${SB}/rest/v1/site_settings?id=eq.main&select=data`, { headers: H });
     const rows = await r.json();
-    tpl = rows && rows[0] && rows[0].data && rows[0].data.emails && rows[0].data.emails[key];
+    const data = (rows && rows[0] && rows[0].data) || {};
+    tpl = data.emails && data.emails[key];
+    if (data.park && data.park.holdHours != null) hold = data.park.holdHours;
   } catch {}
+  vars = Object.assign({ hold }, vars);
   const FALLBACK = {
     request:   { subject: 'Your Paphos Paws Park booking request 🐾', body: "Hi!\n\nThanks for your booking request for Paphos Paws Park. Please make your donation to reserve your slot, then reply with a screenshot or receipt and we'll confirm your visit.\n\nThank you for supporting Alex's Farm. 🐾" },
     confirmed: { subject: 'Your Paphos Paws Park visit is confirmed ✅', body: "Your visit to Paphos Paws Park is confirmed.\n\nDate: {date}\nTime: {time}\n\nWe'll send your gate code before your visit. Thank you for supporting Alex's Farm! 🐾" }

@@ -113,6 +113,32 @@ export default async (req) => {
       await fetch(`${SB}/rest/v1/park_bookings?id=eq.${encodeURIComponent(body.id)}`, { method: 'DELETE', headers: H });
       return json({ ok: true });
     }
+    // Admin creates a booking on a customer's behalf (e.g. same-day). No 24h rule.
+    if (action === 'create-booking') {
+      const b = body.booking || {};
+      if (!b.date || !b.slot) return json({ error: 'Please choose a date and time slot.' }, 400);
+      const row = {
+        date: b.date, slot: b.slot, dogs: parseInt(b.dogs, 10) || 1,
+        name: b.name || '', phone: b.phone || '', email: b.email || '',
+        amount: (b.amount != null && b.amount !== '') ? Number(b.amount) : null,
+        currency: 'eur', status: b.status || 'confirmed', payment_method: b.payment || null
+      };
+      const ins = async (rw) => {
+        let res = await fetch(`${SB}/rest/v1/park_bookings`, { method: 'POST', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(rw) });
+        if (!res.ok && res.status !== 409 && rw.payment_method !== undefined) {
+          const t = await res.clone().text();
+          if (/payment_method/i.test(t)) { const b2 = { ...rw }; delete b2.payment_method; res = await fetch(`${SB}/rest/v1/park_bookings`, { method: 'POST', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(b2) }); }
+        }
+        return res;
+      };
+      const r = await ins(row);
+      if (r.status === 409) return json({ error: 'That date and time slot is already booked.' }, 409);
+      if (!r.ok) return json({ error: 'Could not create the booking: ' + (await r.text()) }, 500);
+      if (b.sendEmail && row.email && row.status === 'confirmed') {
+        await sendBookingEmail(SB, H, row.email, 'confirmed', { name: row.name, date: row.date, time: row.slot, dogs: row.dogs });
+      }
+      return json(await r.json());
+    }
 
     return json({ error: 'unknown action' }, 400);
   } catch (e) {

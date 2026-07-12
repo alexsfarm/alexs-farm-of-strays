@@ -143,7 +143,7 @@ const DEFAULT_HELP = [
 ];
 const DEFAULT_EMAILS = {
   request: { subject: "Thank you for your Paphos Paws Park booking request 🐾",
-    body: "Hi 👋\n\nThank you for choosing Paphos Paws Park and for supporting Alex's Farm.\n\nTo reserve your requested time slot, please donate via your selected method or one of the options in the \"Ways to donate\" section on our homepage.\n\nTo help us identify your donation, please use this reference:\n{name} Donation\n(Example: John Smith Donation)\n\nOnce your donation has been made, simply send us a screenshot or receipt and we'll confirm your visit.\n\nPlease note: requested time slots are held for up to 2 hours. If we don't receive confirmation within that time, the slot may be released for other supporters and their dogs.\n\nYour gate access code will be sent approximately 2 hours before your visit.\n\nThank you for supporting Alex's Farm. Every donation helps us continue our rescue and animal welfare work. 🐾❤️" },
+    body: "Hi 👋\n\nThank you for choosing Paphos Paws Park and for supporting Alex's Farm.\n\nTo reserve your requested time slot, please donate via your selected method or one of the options in the \"Ways to donate\" section on our homepage.\n\nTo help us identify your donation, please use this reference:\n{name} Donation\n(Example: John Smith Donation)\n\nOnce your donation has been made, simply send us a screenshot or receipt and we'll confirm your visit.\n\nPlease note: requested time slots are held for up to {hold} hours. If we don't receive confirmation within that time, the slot may be released for other supporters and their dogs.\n\nYour gate access code will be sent approximately 2 hours before your visit.\n\nThank you for supporting Alex's Farm. Every donation helps us continue our rescue and animal welfare work. 🐾❤️" },
   confirmed: { subject: "Your Paphos Paws Park visit is confirmed ✅",
     body: "Thank you ❤️\n\nWe have received your donation and your visit to Paphos Paws Park is now confirmed.\n\n📅 Date: {date}\n🕒 Time: {time}\n📍 Location: https://maps.app.goo.gl/ZfqgSkTSi1ZyyuK26?g_st=ic\n\nYour gate access code and arrival information will be sent before your visit.\n\nThank you for supporting Alex's Farm. 🐾" },
   prearrival: { subject: "Your Paphos Paws Park visit — arrival details & gate code 🔑",
@@ -237,6 +237,8 @@ async function loadAll(){
   deepFill(S.park, C.park||{});
   S.emails = S.emails || {};
   ['request','confirmed','prearrival','postvisit'].forEach(k=>{ if(!S.emails[k] || !S.emails[k].body) S.emails[k]=Object.assign({}, DEFAULT_EMAILS[k]); });
+  S.pages = S.pages || {};
+  ['faqs','privacy','terms'].forEach(k=>{ if(!S.pages[k] || !S.pages[k].body){ S.pages[k] = (C.pages && C.pages[k]) ? Object.assign({}, C.pages[k]) : {title:'',body:''}; } });
   try{ A = await api('list-animals') || []; }catch(e){ A = []; }
   if(!Array.isArray(A)) A = [];
   try{ B = await api('list-bookings') || []; }catch(e){ B = []; }
@@ -291,7 +293,7 @@ function selectField(label, value, options, onInput){
 /* ---------- tabs ---------- */
 const TABS = [
   ['content','📝 Content & text'],['design','🎨 Design'],['animals','🐾 Animals'],
-  ['donate','💳 Donations'],['links','🔗 Links & social'],['park','🎾 Park & booking'],['emails','📧 Emails'],['bookings','📅 Bookings']
+  ['donate','💳 Donations'],['links','🔗 Links & social'],['park','🎾 Park & booking'],['emails','📧 Emails'],['pages','📄 Pages'],['bookings','📅 Bookings']
 ];
 function buildTabs(){
   const t=document.getElementById('tabs'); t.innerHTML='';
@@ -304,7 +306,7 @@ function render(){
   const p=document.getElementById('panel'); p.innerHTML='';
   const sb=document.getElementById('savebar');
   sb.classList.toggle('hide', TAB==='animals'||TAB==='bookings');   // those save per-row
-  ({content:renderContent, design:renderDesign, animals:renderAnimals, donate:renderDonate, links:renderLinks, park:renderPark, emails:renderEmails, bookings:renderBookings}[TAB])(p);
+  ({content:renderContent, design:renderDesign, animals:renderAnimals, donate:renderDonate, links:renderLinks, park:renderPark, emails:renderEmails, pages:renderPages, bookings:renderBookings}[TAB])(p);
 }
 
 /* ===== CONTENT ===== */
@@ -556,6 +558,9 @@ function renderPark(p){
   g.appendChild(selectField('Currency', k.currency||'EUR', [['EUR','€ Euro'],['GBP','£ Pound']], v=> k.currency=v));
   g.appendChild(inputField('Max dogs per booking', k.maxDogs||7, v=> k.maxDogs=parseInt(v,10)||1, {type:'number',min:1}));
   g.appendChild(inputField('Minimum notice (hours)', k.minNoticeHours||24, v=> k.minNoticeHours=parseInt(v,10)||24, {type:'number',min:1}));
+  g.appendChild(inputField('Maximum advance (days)', k.maxAdvanceDays||365, v=> k.maxAdvanceDays=parseInt(v,10)||365, {type:'number',min:1}));
+  g.appendChild(inputField('Hold unconfirmed slots for (hours)', k.holdHours!=null?k.holdHours:2, v=> k.holdHours=parseInt(v,10)||2, {type:'number',min:1}));
+  g.appendChild(inputField('Post-visit email — hours after visit', k.postVisitHours!=null?k.postVisitHours:1, v=> k.postVisitHours=parseInt(v,10)||1, {type:'number',min:0}));
   c.appendChild(g);
   c.appendChild(inputField('"Funds the rescue" note (under the price)', k.fundsMessage||'', v=> k.fundsMessage=v, {tag:'textarea', placeholder:'Every booking helps fund food and vet care…'}));
   p.appendChild(c);
@@ -634,9 +639,55 @@ function renderEmails(p){
   p.appendChild(el('p',{class:'muted'},['Note: the pre-arrival email (③) only sends once you have entered a gate code in the Park & Booking tab.']));
 }
 
+/* ===== INFO PAGES (FAQs / Privacy / Terms) ===== */
+function renderPages(p){
+  p.appendChild(el('div',{class:'note'},['These are the pop-up pages linked in the website footer. Edit the wording below. Tip: start a line with "## " to make it a section heading; questions (lines ending in "?") show in bold. Press "Save content & design" after editing.']));
+  S.pages = S.pages || {};
+  [['faqs','FAQs'],['privacy','Privacy Policy'],['terms','Terms & Conditions']].forEach(([key,name])=>{
+    S.pages[key]=S.pages[key]||{};
+    const c=el('div',{class:'card'}); c.appendChild(el('h3',{},[name]));
+    c.appendChild(inputField('Title (also the footer link label)', S.pages[key].title||name, v=> S.pages[key].title=v));
+    c.appendChild(inputField('Content', S.pages[key].body||'', v=> S.pages[key].body=v, {tag:'textarea'}));
+    p.appendChild(c);
+  });
+}
+
 /* ===== BOOKINGS ===== */
 function renderBookings(p){
-  if(!B.length){ p.appendChild(el('div',{class:'card'},[el('h3',{},['Bookings']), el('p',{class:'muted'},['No booking requests yet. Requests made on the website appear here.'])])); return; }
+  // --- Add a booking on a customer's behalf (incl. same-day) ---
+  const seas=(S.park&&S.park.season)||{};
+  const slotOpts=[...new Set([].concat((seas.summer&&seas.summer.slots)||[], (seas.winter&&seas.winter.slots)||[]))];
+  const payOpts=((S.donate&&S.donate.methods)||[]).map(m=>m.label).filter(Boolean);
+  const nb={date:'',slot:'',dogs:1,name:'',phone:'',email:'',payment:'',status:'confirmed',sendEmail:false};
+  const ac=el('div',{class:'card'}); ac.appendChild(el('h3',{},['Add a booking (for a customer who contacted you)']));
+  ac.appendChild(el('p',{class:'muted'},['Book someone in yourself — including same-day. This skips the 24-hour rule and holds the slot.']));
+  const g1=el('div',{class:'grid2'});
+  g1.appendChild(inputField('Date', '', v=> nb.date=v, {type:'date'}));
+  g1.appendChild(slotOpts.length ? selectField('Time slot', '', [['','Choose a time…']].concat(slotOpts.map(s=>[s,s])), v=> nb.slot=v) : inputField('Time slot', '', v=> nb.slot=v, {placeholder:'e.g. 10:00 – 11:00'}));
+  ac.appendChild(g1);
+  const g2=el('div',{class:'grid3'});
+  g2.appendChild(inputField('Number of dogs', 1, v=> nb.dogs=parseInt(v,10)||1, {type:'number',min:1}));
+  g2.appendChild(selectField('Status', 'confirmed', [['confirmed','Confirmed'],['requested','Requested (awaiting payment)']], v=> nb.status=v));
+  g2.appendChild(payOpts.length ? selectField('Donation method', '', [['','—']].concat(payOpts.map(l=>[l,l])), v=> nb.payment=v) : inputField('Donation method', '', v=> nb.payment=v));
+  ac.appendChild(g2);
+  const g3=el('div',{class:'grid3'});
+  g3.appendChild(inputField('Customer name', '', v=> nb.name=v));
+  g3.appendChild(inputField('Phone', '', v=> nb.phone=v));
+  g3.appendChild(inputField('Email', '', v=> nb.email=v, {type:'email'}));
+  ac.appendChild(g3);
+  const cw=el('label',{style:'display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:400'});
+  const chk=el('input',{type:'checkbox'}); chk.addEventListener('change',()=>{ nb.sendEmail=chk.checked; });
+  cw.appendChild(chk); cw.appendChild(document.createTextNode('Also email the confirmation to the customer'));
+  ac.appendChild(cw);
+  ac.appendChild(el('p',{},[ el('button',{class:'btn btn-primary',style:'margin-top:10px',onclick:async()=>{
+    if(!nb.date||!nb.slot){ toast('Please choose a date and time slot.', true); return; }
+    if(!nb.name){ toast('Please enter the customer name.', true); return; }
+    try{ await api('create-booking',{booking:nb}); toast('Booking added ✓'); B=await api('list-bookings'); render(); }
+    catch(e){ toast('Could not add booking: '+(e.message||'unknown'), true); }
+  }},['Add booking']) ]));
+  p.appendChild(ac);
+
+  if(!B.length){ p.appendChild(el('div',{class:'card'},[el('h3',{},['Booking requests']), el('p',{class:'muted'},['No booking requests yet. Requests made on the website appear here.'])])); return; }
   const c=el('div',{class:'card'}); c.appendChild(el('h3',{},['Dog-park booking requests']));
   c.appendChild(el('p',{class:'muted'},['"requested" = awaiting your confirmation. Mark confirmed once the customer has paid, Mark cancelled to decline, or Delete to remove it and free the slot.']));
   B.forEach(b=>{

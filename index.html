@@ -248,6 +248,20 @@
   .pg-placeholder{aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#c7d6e3;text-align:center;padding:20px}
   .pg-placeholder .pg-ico{font-size:2.4rem;opacity:.85}
 
+  /* Info-page pop-up (FAQs / Privacy / Terms) */
+  .pageov{position:fixed;inset:0;z-index:1100;display:none;align-items:flex-start;justify-content:center;padding:5vh 16px;background:rgba(9,20,32,.72);overflow-y:auto}
+  .pageov.open{display:flex}
+  .pageov-box{background:#fff;color:var(--ink);max-width:760px;width:100%;border-radius:18px;padding:34px 30px 40px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.4)}
+  .pageov-box h2{color:var(--navy);margin:0 0 14px;font-size:1.7rem}
+  .pageov-close{position:absolute;top:14px;right:16px;width:40px;height:40px;border-radius:50%;border:0;background:var(--soft);color:var(--navy);font-size:1.5rem;line-height:1;cursor:pointer}
+  .pageov-close:hover{background:var(--line)}
+  .pageov-body{font-size:.97rem;line-height:1.6;color:#33424f}
+  .pageov-body h3{color:var(--navy);margin:26px 0 8px;font-size:1.2rem}
+  .pageov-body h4{color:var(--navy);margin:20px 0 6px;font-size:1.03rem}
+  .pageov-body p{margin:0 0 11px}
+  .pageov-body p.q{font-weight:700;color:var(--ink);margin-top:14px}
+  .footer-links a{margin:0 9px;white-space:nowrap;text-decoration:underline}
+
   .help-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:30px 24px;text-align:center;
      transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
   .help-card:hover{transform:translateY(-8px);box-shadow:var(--shadow-lg)}
@@ -524,10 +538,20 @@
     <div class="hearts">🐾💛🐾</div>
     <p data-txt="footer.org"><strong>Alex's Farm of Strays Animal Rescue</strong> · Paphos, Cyprus</p>
     <p data-txt="footer.tagline">Registered Animal Rescue • Volunteer Run • No Government Funding</p>
+    <p class="footer-links" id="footer-pages" style="margin-top:14px"></p>
     <p style="opacity:.7;font-size:.85rem">© <span id="yr"></span> Alex's Farm of Strays. All rights reserved.</p>
     <p style="opacity:.7;font-size:.85rem">Website created by <a href="https://www.oneaxion.com" target="_blank" rel="noopener">One Axion</a> · <a href="https://www.oneaxion.com" target="_blank" rel="noopener">www.oneaxion.com</a></p>
   </div>
 </footer>
+
+<!-- Info-page pop-up (FAQs / Privacy / Terms) -->
+<div class="pageov" id="pageov" role="dialog" aria-modal="true" aria-label="Information">
+  <div class="pageov-box">
+    <button class="pageov-close" id="pageovClose" type="button" aria-label="Close">&times;</button>
+    <h2 id="pageovTitle"></h2>
+    <div class="pageov-body" id="pageovBody"></div>
+  </div>
+</div>
 
 <!-- Photo lightbox — shows the full, uncropped animal photo when a card photo is tapped -->
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Animal photo">
@@ -560,6 +584,41 @@
       if(e.target===lb || e.target===lbClose){ close(); }
     });
     document.addEventListener('keydown', e=>{ if(e.key==='Escape' && lb.classList.contains('open')) close(); });
+  })();
+  // ---- Info-page pop-ups (FAQs / Privacy / Terms) --------------------------
+  function pagesData(){ return (CFG.pages && typeof CFG.pages==='object') ? CFG.pages : {}; }
+  function renderPageLinks(){
+    const host=document.getElementById('footer-pages'); if(!host) return;
+    const P=pagesData();
+    const links=['faqs','privacy','terms'].filter(k=>P[k] && String(P[k].body||'').trim()).map(k=>`<a href="#" data-page="${k}">${esc(P[k].title||k)}</a>`);
+    host.innerHTML=links.join(' <span style="opacity:.4">·</span> ');
+  }
+  function renderPageBody(text){
+    let html='';
+    String(text||'').split('\n').forEach(raw=>{
+      const line=raw.trim(); if(!line) return;
+      if(line.slice(0,3)==='## ') html+=`<h3>${esc(line.slice(3))}</h3>`;
+      else if(/^\d+\.\s/.test(line)) html+=`<h4>${esc(line)}</h4>`;
+      else if(line.charAt(line.length-1)==='?') html+=`<p class="q">${esc(line)}</p>`;
+      else html+=`<p>${esc(line)}</p>`;
+    });
+    return html;
+  }
+  function openPage(key){
+    const pg=pagesData()[key]; const ov=document.getElementById('pageov'); if(!pg||!ov) return;
+    document.getElementById('pageovTitle').textContent=pg.title||'';
+    document.getElementById('pageovBody').innerHTML=renderPageBody(pg.body);
+    ov.scrollTop=0; ov.classList.add('open'); document.body.style.overflow='hidden';
+  }
+  function closePage(){ const ov=document.getElementById('pageov'); if(ov){ ov.classList.remove('open'); document.body.style.overflow=''; } }
+  (function setupPages(){
+    const ov=document.getElementById('pageov'); if(!ov) return;
+    document.addEventListener('click', e=>{
+      const a=e.target.closest && e.target.closest('a[data-page]');
+      if(a){ e.preventDefault(); openPage(a.getAttribute('data-page')); return; }
+      if(e.target===ov || e.target.id==='pageovClose') closePage();
+    });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape' && ov.classList.contains('open')) closePage(); });
   })();
   const val = id => { const e=document.getElementById(id); return e?e.value:''; };
   const yr=document.getElementById('yr'); if(yr) yr.textContent=new Date().getFullYear();
@@ -630,7 +689,7 @@
   }
   function renderAll(){
     applyTheme(CFG.theme); applyText(CFG.text);
-    renderStats(); renderStory(); renderSteps(); renderHelp(); renderPark(); renderParkGallery(); renderDonate(); renderContact();
+    renderStats(); renderStory(); renderSteps(); renderHelp(); renderPark(); renderParkGallery(); renderDonate(); renderContact(); renderPageLinks();
     const hl=document.getElementById('hero-lead'); if(hl&&CFG.strapline) hl.textContent=CFG.strapline;
     const sb=document.querySelector('#bookingForm button[type=submit]'); if(sb) sb.textContent=stripeOn()?'Book & pay':'Request booking';
     const afb=document.getElementById('animals-fb'); if(afb&&CFG.facebookRescue){ afb.href=CFG.facebookRescue; afb.target='_blank'; afb.rel='noopener'; }
@@ -645,7 +704,7 @@
         if(!isObj(data)) return;
         deepMerge(CFG, data);
         renderAll();
-        const d=document.getElementById('bk-date'); if(d){ const days=Math.max(1,Math.ceil(((CFG.park&&CFG.park.minNoticeHours)||24)/24)); const md=new Date(); md.setDate(md.getDate()+days); d.min=md.toISOString().split('T')[0]; }
+        const d=document.getElementById('bk-date'); if(d){ const days=Math.max(1,Math.ceil(((CFG.park&&CFG.park.minNoticeHours)||24)/24)); const md=new Date(); md.setDate(md.getDate()+days); d.min=md.toISOString().split('T')[0]; const mx=new Date(); mx.setDate(mx.getDate()+(((CFG.park&&CFG.park.maxAdvanceDays)||365))); d.max=mx.toISOString().split('T')[0]; }
         setupTilt(); observeReveals(document);
       }).catch(()=>{});
   }
@@ -775,6 +834,7 @@
     if(!date||!slot||!name||!phone||!email){ alert('Please fill in all the fields, including your email.'); return false; }
     const dEl=document.getElementById('bk-date');
     if(dEl&&dEl.min&&date<dEl.min){ const hrs=(CFG.park&&CFG.park.minNoticeHours)||24; alert('Please choose a date at least '+hrs+' hours from now.'); return false; }
+    if(dEl&&dEl.max&&date>dEl.max){ alert('Sorry, bookings can only be made up to '+(((CFG.park&&CFG.park.maxAdvanceDays)||365))+' days ahead.'); return false; }
     const total=updatePrice();
     if(stripeOn()){
       const btn=e.target.querySelector('button[type=submit]'); if(btn){ btn.disabled=true; btn.textContent='Redirecting…'; }
@@ -857,7 +917,7 @@
     const hdr=document.getElementById('hdr'); if(hdr){ const onScroll=()=>hdr.classList.toggle('scrolled',window.scrollY>20); onScroll(); window.addEventListener('scroll',onScroll,{passive:true}); }
     if(!reduce){ const paws=document.getElementById('paws'); if(paws){ for(let i=0;i<12;i++){ const s=document.createElement('span'); s.className='paw'; s.textContent='🐾'; s.style.left=Math.random()*100+'%'; s.style.bottom=(-20+Math.random()*40)+'%'; s.style.fontSize=(1+Math.random()*1.6)+'rem'; s.style.animationDuration=(7+Math.random()*8)+'s'; s.style.animationDelay=(-Math.random()*10)+'s'; paws.appendChild(s); } } }
 
-    const d=document.getElementById('bk-date'); if(d){ const days=Math.max(1,Math.ceil(((CFG.park&&CFG.park.minNoticeHours)||24)/24)); const md=new Date(); md.setDate(md.getDate()+days); d.min=md.toISOString().split('T')[0]; d.addEventListener('change',loadBookedSlots); }
+    const d=document.getElementById('bk-date'); if(d){ const days=Math.max(1,Math.ceil(((CFG.park&&CFG.park.minNoticeHours)||24)/24)); const md=new Date(); md.setDate(md.getDate()+days); d.min=md.toISOString().split('T')[0]; const mx=new Date(); mx.setDate(mx.getDate()+(((CFG.park&&CFG.park.maxAdvanceDays)||365))); d.max=mx.toISOString().split('T')[0]; d.addEventListener('change',loadBookedSlots); }
     bookingBanner();
     document.querySelectorAll('#nav a').forEach(a=>a.addEventListener('click',()=>document.getElementById('nav').classList.remove('open')));
   }

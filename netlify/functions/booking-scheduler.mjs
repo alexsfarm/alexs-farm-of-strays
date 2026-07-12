@@ -11,9 +11,16 @@ export default async () => {
   const H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' };
   const now = Date.now();
 
-  // (1) Release unconfirmed holds older than 2 hours.
+  // Load settings once (editable hold time, post-visit timing, access code + templates).
+  let settings = {};
+  try { const r = await fetch(`${SB}/rest/v1/site_settings?id=eq.main&select=data`, { headers: H }); const s = await r.json(); settings = (s && s[0] && s[0].data) || {}; } catch {}
+  const pk = settings.park || {};
+  const holdH = Number(pk.holdHours != null ? pk.holdHours : 2);
+  const postH = Number(pk.postVisitHours != null ? pk.postVisitHours : 1);
+
+  // (1) Release unconfirmed holds older than the hold time.
   try {
-    const cutoff = new Date(now - 2 * 3600000).toISOString();
+    const cutoff = new Date(now - holdH * 3600000).toISOString();
     await fetch(`${SB}/rest/v1/park_bookings?status=eq.requested&created_at=lt.${encodeURIComponent(cutoff)}`,
       { method: 'PATCH', headers: { ...H, Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'cancelled' }) });
   } catch {}
@@ -24,9 +31,7 @@ export default async () => {
   try { const r = await fetch(`${SB}/rest/v1/park_bookings?select=prearrival_sent&limit=1`, { headers: H }); hasCols = r.ok; } catch {}
   if (!hasCols) return new Response('released; email columns not present yet');
 
-  let settings = {};
-  try { const r = await fetch(`${SB}/rest/v1/site_settings?id=eq.main&select=data`, { headers: H }); const s = await r.json(); settings = (s && s[0] && s[0].data) || {}; } catch {}
-  const access = (settings.park && settings.park.access) || {};
+  const access = pk.access || {};
   const leadH = Number(access.codeLeadHours != null ? access.codeLeadHours : 2);
 
   const yest = new Date(now - 24 * 3600000).toISOString().slice(0, 10);
@@ -43,7 +48,7 @@ export default async () => {
       if (ok) await mark(SB, H, b.id, 'prearrival_sent');
     }
     // #4 post-visit, within ~24h after it ends
-    if (b.postvisit_sent !== true && now >= endUTC + 3600000 && now <= endUTC + 25 * 3600000) {
+    if (b.postvisit_sent !== true && now >= endUTC + postH * 3600000 && now <= endUTC + (postH + 24) * 3600000) {
       const ok = await sendEmail(settings, b.email, 'postvisit', { name: b.name, date: b.date, time: b.slot });
       if (ok) await mark(SB, H, b.id, 'postvisit_sent');
     }
