@@ -51,6 +51,40 @@ window.SITE_CONFIG = {
     { title: "Welcome home",  text: "Once approved, you'll complete the adoption paperwork, make the adoption donation, and welcome your new family member home." }
   ],
 
+
+  /* ---- 4b. ADOPTION DONATIONS (expandable cards between the steps and the
+          "Looking for a home" list). Also editable from the admin page.
+     Formatting inside each "body":  "## " = small heading,  "- " = bullet,
+     "> " = italic note,  a blank line = a new paragraph. ------------------ */
+  adoptionDonations:   {
+    "eyebrow": "Suggested donations",
+    "heading": "Adoption donations",
+    "intro": "Our suggested adoption donations help cover part of the cost of preparing each animal for their forever home. Every adoption also helps us continue rescuing and caring for animals in need.\n\nThe veterinary treatment, documentation and transport included depends on whether the animal is being adopted within Cyprus or internationally.\n\n> Please note: In exceptional circumstances, where part of an animal's veterinary or transport costs have already been covered through sponsorship or a dedicated donation, Alex's Farm may, at its sole discretion, reduce the suggested adoption donation. This is considered on a case-by-case basis and should not be expected. We do not rehome animals free of charge, as we believe adopters should contribute towards the majority of the costs involved. This helps demonstrate a genuine commitment and helps ensure they are financially prepared for the ongoing responsibility of caring for a pet.",
+    "cards": [
+      {
+        "icon": "🐶",
+        "title": "Dogs – Adoption in Cyprus",
+        "body": "## Suggested adoption donation: €250\nYour suggested adoption donation includes:\n- Adoption application review\n- Successful home check\n- Microchip\n- Age-appropriate core vaccinations\n- Flea treatment\n- Worming treatment\n- 4DX SNAP Test\n- Leishmania SNAP Test\n- IFAT blood test (where age appropriate)\n- Spaying or neutering (where age appropriate, with the cost included in the suggested adoption donation)\n- Lifetime rescue backup and support"
+      },
+      {
+        "icon": "🐶",
+        "title": "Dogs – Adoption to the United Kingdom",
+        "body": "## Suggested adoption donation: £800\nYour suggested adoption donation includes:\n- Adoption application review\n- Successful home check\n- Microchip\n- Registration of the microchip with PetTrack\n- Age-appropriate core vaccinations\n- Rabies vaccination\n- Pet Passport\n- Flea treatment\n- Worming treatment\n- 4DX SNAP Test\n- Leishmania SNAP Test\n- IFAT blood test (where age appropriate)\n- Spaying or neutering (where age appropriate)\n- Official Veterinary Health Certificate\n- Export Health Certificate\n- Transport to Larnaca Airport\n- Flight to the United Kingdom\n- Courier transport to the UK meeting point\n- Return cost of the travel crate\n- Lifetime rescue backup and support\n\nThis helps ensure every dog travels safely, legally and in good health, with all required veterinary treatment, documentation and transport arrangements completed before arrival.\n\n> Please note: If a puppy is too young to be spayed or neutered before travelling, the adopter must arrange the procedure when the dog reaches the appropriate age and provide proof to Alex's Farm.\n\n## Optional veterinary testing\nA Brucella laboratory test can be arranged at the adopter's request for an additional £100."
+      },
+      {
+        "icon": "🐱",
+        "title": "Cats – Adoption in Cyprus",
+        "body": "## Suggested adoption donation: €120\nYour suggested adoption donation includes:\n- Adoption application review\n- Successful home check\n- Microchip\n- Age-appropriate core vaccinations\n- Flea treatment\n- Worming treatment\n- FIV/FeLV testing (where age appropriate)\n- Spaying or neutering (where age appropriate, with the cost included in the suggested adoption donation)\n- Lifetime rescue backup and support"
+      },
+      {
+        "icon": "🐱",
+        "title": "Cats – Adoption to the United Kingdom",
+        "body": "## Suggested adoption donation: £650\nYour suggested adoption donation includes:\n- Adoption application review\n- Successful home check\n- Microchip\n- Registration of the microchip with PetTrack\n- Age-appropriate core vaccinations\n- Rabies vaccination\n- Pet Passport\n- Flea treatment\n- Worming treatment\n- FIV/FeLV testing (where age appropriate)\n- Spaying or neutering (where age appropriate)\n- Official Veterinary Health Certificate\n- Intra Trade Certificate\n- Transport to Larnaca Airport\n- Flight to the United Kingdom as part of a shared monthly transport\n- Courier transport to the UK meeting point\n- Brand-new airline-approved travel carrier\n- Lifetime rescue backup and support\n\nThis helps ensure every cat travels safely, legally and in good health, with all required veterinary treatment, documentation and transport arrangements completed before arrival.\n\n> Please note: If a kitten is too young to be spayed or neutered before travelling, the adopter must arrange the procedure when the cat reaches the appropriate age and provide proof to Alex's Farm.\n\nIf you would prefer your cat to travel on a direct flight rather than a shared monthly transport, we can arrange a personalised quotation. The cost varies depending on the destination airport, airline and the number of cats travelling.\n\n## Multi-cat adoption donations\n- 1 cat: £650\n- 2 cats travelling together: £1,100\n- 3 cats travelling together: £1,500"
+      }
+    ],
+    "footer": "## Adoptions to other countries\nAlthough the majority of our international adoptions are to the United Kingdom, we are happy to consider adoptions to other countries for the right home and the right animal, provided all legal import requirements can be met.\n\nEvery application is assessed individually, taking into account the needs of the animal, available support in the destination country and transport arrangements. The welfare of the animal will always be our highest priority."
+  },
+
   /* ---- 5. ANIMALS LOOKING FOR A HOME ------------------------------------- */
   // species: "Dog", "Cat", "Rabbit", "Bird" (anything else shows a paw icon).
   // status:  "available" or "rehomed"  (shows a coloured pill on the card).

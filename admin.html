@@ -239,6 +239,9 @@ async function loadAll(){
   ['request','confirmed','prearrival','postvisit'].forEach(k=>{ if(!S.emails[k] || !S.emails[k].body) S.emails[k]=Object.assign({}, DEFAULT_EMAILS[k]); });
   S.pages = S.pages || {};
   ['faqs','privacy','terms'].forEach(k=>{ if(!S.pages[k] || !S.pages[k].body){ S.pages[k] = (C.pages && C.pages[k]) ? Object.assign({}, C.pages[k]) : {title:'',body:''}; } });
+  if(!S.adoptionDonations || !Array.isArray(S.adoptionDonations.cards) || !S.adoptionDonations.cards.length){
+    S.adoptionDonations = C.adoptionDonations ? JSON.parse(JSON.stringify(C.adoptionDonations)) : {heading:'',intro:'',cards:[],footer:''};
+  }
   try{ A = await api('list-animals') || []; }catch(e){ A = []; }
   if(!Array.isArray(A)) A = [];
   try{ B = await api('list-bookings') || []; }catch(e){ B = []; }
@@ -293,7 +296,7 @@ function selectField(label, value, options, onInput){
 /* ---------- tabs ---------- */
 const TABS = [
   ['content','📝 Content & text'],['design','🎨 Design'],['animals','🐾 Animals'],
-  ['donate','💳 Donations'],['links','🔗 Links & social'],['park','🎾 Park & booking'],['emails','📧 Emails'],['pages','📄 Pages'],['bookings','📅 Bookings']
+  ['donate','💳 Donations'],['links','🔗 Links & social'],['park','🎾 Park & booking'],['emails','📧 Emails'],['pages','📄 Pages'],['adoptdono','💶 Adoption donations'],['bookings','📅 Bookings']
 ];
 function buildTabs(){
   const t=document.getElementById('tabs'); t.innerHTML='';
@@ -306,7 +309,7 @@ function render(){
   const p=document.getElementById('panel'); p.innerHTML='';
   const sb=document.getElementById('savebar');
   sb.classList.toggle('hide', TAB==='animals'||TAB==='bookings');   // those save per-row
-  ({content:renderContent, design:renderDesign, animals:renderAnimals, donate:renderDonate, links:renderLinks, park:renderPark, emails:renderEmails, pages:renderPages, bookings:renderBookings}[TAB])(p);
+  ({content:renderContent, design:renderDesign, animals:renderAnimals, donate:renderDonate, links:renderLinks, park:renderPark, emails:renderEmails, pages:renderPages, adoptdono:renderDono, bookings:renderBookings}[TAB])(p);
 }
 
 /* ===== CONTENT ===== */
@@ -650,6 +653,29 @@ function renderPages(p){
     c.appendChild(inputField('Content', S.pages[key].body||'', v=> S.pages[key].body=v, {tag:'textarea'}));
     p.appendChild(c);
   });
+}
+
+/* ===== ADOPTION DONATIONS (expandable cards on the main page) ===== */
+function renderDono(p){
+  p.appendChild(el('div',{class:'note'},['This is the "Adoption donations" section on the main page (it sits between "The adoption procedure" and "Looking for a home", shown as four expandable cards). Formatting tips: start a line with "## " for a small heading (e.g. the price), "- " for a bullet point, or "> " for an italic note. Leave a blank line between paragraphs. Press "Save content & design" after editing.']));
+  const D = S.adoptionDonations = S.adoptionDonations || {};
+  D.cards = Array.isArray(D.cards) ? D.cards : [];
+  const top=el('div',{class:'card'}); top.appendChild(el('h3',{},['Heading & intro']));
+  top.appendChild(inputField('Section heading', D.heading||'', v=> D.heading=v));
+  top.appendChild(inputField('Intro text (shown above the cards)', D.intro||'', v=> D.intro=v, {tag:'textarea'}));
+  p.appendChild(top);
+  const names=['Card 1 — Dogs · Adoption in Cyprus','Card 2 — Dogs · Adoption to the UK','Card 3 — Cats · Adoption in Cyprus','Card 4 — Cats · Adoption to the UK'];
+  for(let i=0;i<4;i++){
+    D.cards[i]=D.cards[i]||{};
+    const c=el('div',{class:'card'}); c.appendChild(el('h3',{},[names[i]]));
+    c.appendChild(inputField('Icon (emoji)', D.cards[i].icon||'', v=> D.cards[i].icon=v));
+    c.appendChild(inputField('Card title', D.cards[i].title||'', v=> D.cards[i].title=v));
+    c.appendChild(inputField('Card content', D.cards[i].body||'', v=> D.cards[i].body=v, {tag:'textarea'}));
+    p.appendChild(c);
+  }
+  const foot=el('div',{class:'card'}); foot.appendChild(el('h3',{},['Footer note (shown below the cards)']));
+  foot.appendChild(inputField('Footer text', D.footer||'', v=> D.footer=v, {tag:'textarea'}));
+  p.appendChild(foot);
 }
 
 /* ===== BOOKINGS ===== */

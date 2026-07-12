@@ -261,6 +261,32 @@
   .pageov-body p{margin:0 0 11px}
   .pageov-body p.q{font-weight:700;color:var(--ink);margin-top:14px}
   .footer-links a{margin:0 9px;white-space:nowrap;text-decoration:underline}
+  /* Adoption donations (expandable cards) */
+  .dono-intro{max-width:70ch;margin:0 auto 22px;color:var(--muted);text-align:left}
+  .dono-intro p{margin:0 0 12px;line-height:1.6}
+  .dono-intro .dono-note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:12px;padding:12px 16px;color:var(--ink);font-size:.94em;font-style:italic}
+  .dono{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:14px;text-align:left}
+  .dono-item{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 20px rgba(22,49,74,.06);overflow:hidden}
+  .dono-item[open]{box-shadow:0 10px 30px rgba(22,49,74,.10)}
+  .dono-head{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:18px 20px;font-weight:700;color:var(--navy);font-size:1.08rem}
+  .dono-head::-webkit-details-marker{display:none}
+  .dono-head:hover{background:var(--soft)}
+  .dono-ico{font-size:1.4rem;line-height:1}
+  .dono-title{flex:1}
+  .dono-chev{transition:transform .25s var(--ease);color:var(--amber);font-size:1.05rem}
+  .dono-item[open] .dono-chev{transform:rotate(180deg)}
+  .dono-body{padding:2px 22px 22px;color:var(--ink)}
+  .dono-body>*:first-child{margin-top:0}
+  .dono-body>.dono-sub:first-child{color:var(--amber-deep);font-size:1.15rem;font-weight:800;margin-bottom:12px}
+  .dono-sub{margin:16px 0 8px;color:var(--navy);font-size:1rem;font-weight:700}
+  .dono-body .dono-list{margin:6px 0 12px;padding-left:20px}
+  .dono-body .dono-list li{margin:5px 0;line-height:1.5}
+  .dono-body p{margin:0 0 10px;line-height:1.6}
+  .dono-body .dono-note{color:var(--muted);background:var(--soft);border-radius:10px;padding:10px 14px;margin:10px 0;font-style:italic}
+  .dono-foot{max-width:70ch;margin:22px auto 0;color:var(--muted);text-align:left}
+  .dono-foot .dono-sub{color:var(--navy)}
+  .dono-foot p{line-height:1.6;margin:0 0 10px}
+  @media(max-width:560px){ .dono-head{padding:15px 16px;font-size:1rem} .dono-body{padding:2px 16px 18px} }
 
   .help-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:30px 24px;text-align:center;
      transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
@@ -413,6 +439,9 @@
       <a class="btn btn-blue" href="assets/Adoption-Application-Form.docx" download>📄 Download the Adoption Application Form</a>
     </p>
     <p class="center reveal note" style="max-width:62ch;margin:8px auto 0">Fill it in and email it back to <a id="adopt-email" href="#">us</a> — or message us and we'll send it over.</p>
+
+    <!-- Adoption donations (rendered from config.adoptionDonations / admin settings) -->
+    <div id="donations-block"></div>
 
     <h2 class="reveal" style="margin-top:64px" data-txt="animals.heading">Looking for a home</h2>
     <p class="lead reveal d1" style="margin-bottom:28px" data-txt="animals.lead">A few of the dogs and cats currently in our care.</p>
@@ -620,6 +649,32 @@
     });
     document.addEventListener('keydown', e=>{ if(e.key==='Escape' && ov.classList.contains('open')) closePage(); });
   })();
+  // ---- Adoption donations (expandable cards) -------------------------------
+  function donationsData(){ return (CFG.adoptionDonations && typeof CFG.adoptionDonations==='object') ? CFG.adoptionDonations : {}; }
+  function renderDonoBody(text){
+    const lines=String(text||'').split('\n'); let html='', inList=false;
+    const closeList=()=>{ if(inList){ html+='</ul>'; inList=false; } };
+    lines.forEach(raw=>{
+      const line=raw.trim();
+      if(!line){ closeList(); return; }
+      if(line.slice(0,3)==='## '){ closeList(); html+=`<h4 class="dono-sub">${esc(line.slice(3))}</h4>`; }
+      else if(line.slice(0,2)==='- '){ if(!inList){ html+='<ul class="dono-list">'; inList=true; } html+=`<li>${esc(line.slice(2))}</li>`; }
+      else if(line.slice(0,2)==='> '){ closeList(); html+=`<p class="dono-note">${esc(line.slice(2))}</p>`; }
+      else { closeList(); html+=`<p>${esc(line)}</p>`; }
+    });
+    closeList(); return html;
+  }
+  function renderDonations(){
+    const host=document.getElementById('donations-block'); if(!host) return;
+    const D=donationsData();
+    const cards=Array.isArray(D.cards)?D.cards.filter(c=>c&&(String(c.title||'').trim()||String(c.body||'').trim())):[];
+    if(!cards.length && !String(D.intro||'').trim()){ host.innerHTML=''; return; }
+    let html=`<h2 class="reveal" style="margin-top:64px">${esc(D.heading||'Adoption donations')}</h2>`;
+    if(String(D.intro||'').trim()) html+=`<div class="dono-intro reveal d1">${renderDonoBody(D.intro)}</div>`;
+    html+='<div class="dono reveal d1">'+cards.map((c,i)=>`<details class="dono-item"${i===0?' open':''}><summary class="dono-head"><span class="dono-ico">${esc(c.icon||'🐾')}</span><span class="dono-title">${esc(c.title||'')}</span><span class="dono-chev" aria-hidden="true">▾</span></summary><div class="dono-body">${renderDonoBody(c.body)}</div></details>`).join('')+'</div>';
+    if(String(D.footer||'').trim()) html+=`<div class="dono-foot reveal d1">${renderDonoBody(D.footer)}</div>`;
+    host.innerHTML=html;
+  }
   const val = id => { const e=document.getElementById(id); return e?e.value:''; };
   const yr=document.getElementById('yr'); if(yr) yr.textContent=new Date().getFullYear();
 
@@ -689,7 +744,7 @@
   }
   function renderAll(){
     applyTheme(CFG.theme); applyText(CFG.text);
-    renderStats(); renderStory(); renderSteps(); renderHelp(); renderPark(); renderParkGallery(); renderDonate(); renderContact(); renderPageLinks();
+    renderStats(); renderStory(); renderSteps(); renderDonations(); renderHelp(); renderPark(); renderParkGallery(); renderDonate(); renderContact(); renderPageLinks();
     const hl=document.getElementById('hero-lead'); if(hl&&CFG.strapline) hl.textContent=CFG.strapline;
     const sb=document.querySelector('#bookingForm button[type=submit]'); if(sb) sb.textContent=stripeOn()?'Book & pay':'Request booking';
     const afb=document.getElementById('animals-fb'); if(afb&&CFG.facebookRescue){ afb.href=CFG.facebookRescue; afb.target='_blank'; afb.rel='noopener'; }
