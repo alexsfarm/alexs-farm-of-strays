@@ -487,6 +487,8 @@
             <label for="bk-date">Date</label>
             <input type="date" id="bk-date" required>
             <small class="note" id="bk-date-hint"></small>
+            <small class="note" id="bk-days-note" style="display:none"></small>
+            <small class="note" id="bk-day-warn" style="display:none;color:#b00020;font-weight:700"></small>
           </div>
           <div class="field">
             <label for="bk-slot">Time slot</label>
@@ -513,6 +515,7 @@
           <div class="field" id="bk-pay-field" style="display:none">
             <label for="bk-pay">How would you like to donate?</label>
             <select id="bk-pay"></select>
+            <small class="note" id="bk-pay-note" style="display:none"></small>
           </div>
           <div class="price-row">
             <span>Total</span>
@@ -742,6 +745,25 @@
     if(d.paypal)  a.push({label:'PayPal',  url:d.paypal});
     return a;
   }
+  // ---- Park booking: only instant donation methods are offered -------------
+  // Alex ticks these per method in the admin; if a method has never been set,
+  // fall back to "instant unless it looks like a bank transfer".
+  const SLOW_PAY_RE=/bank|transfer|iban|swift|cheque|cash/i;
+  function isParkPay(m){
+    if(m && typeof m.parkOk==='boolean') return m.parkOk;
+    return !SLOW_PAY_RE.test(String((m&&m.label)||''));
+  }
+  function parkPayList(){ return donateList().filter(isParkPay); }
+  function fillHold(s){ const h=(CFG.park&&CFG.park.holdHours!=null)?CFG.park.holdHours:2; return String(s||'').replace(/\{hold\}/g,h); }
+  // ---- Park booking: which days of the week are open? ----------------------
+  const DAY_KEYS=['sun','mon','tue','wed','thu','fri','sat'];   // JS getDay(): 0 = Sunday
+  const DAY_NAMES={mon:'Monday',tue:'Tuesday',wed:'Wednesday',thu:'Thursday',fri:'Friday',sat:'Saturday',sun:'Sunday'};
+  const WEEK_ORDER=['mon','tue','wed','thu','fri','sat','sun'];
+  function openDaysMap(){ const d=(CFG.park&&CFG.park.openDays); return (d&&typeof d==='object')?d:{}; }
+  function dayKeyOf(dateStr){ const dt=new Date(String(dateStr)+'T12:00:00'); return isNaN(dt.getTime())?null:DAY_KEYS[dt.getDay()]; }
+  function isDayOpen(dateStr){ const k=dayKeyOf(dateStr); if(!k) return true; return openDaysMap()[k]!==false; }
+  function openDayKeys(){ const m=openDaysMap(); return WEEK_ORDER.filter(k=>m[k]!==false); }
+  function listPhrase(a){ return a.length<2?(a[0]||''):(a.slice(0,-1).join(', ')+' and '+a[a.length-1]); }
   function renderAll(){
     applyTheme(CFG.theme); applyText(CFG.text);
     renderStats(); renderStory(); renderSteps(); renderDonations(); renderHelp(); renderPark(); renderParkGallery(); renderDonate(); renderContact(); renderPageLinks();
@@ -749,7 +771,9 @@
     const sb=document.querySelector('#bookingForm button[type=submit]'); if(sb) sb.textContent=stripeOn()?'Book & pay':'Request booking';
     const afb=document.getElementById('animals-fb'); if(afb&&CFG.facebookRescue){ afb.href=CFG.facebookRescue; afb.target='_blank'; afb.rel='noopener'; }
     const pay=document.getElementById('bk-pay'), payField=document.getElementById('bk-pay-field');
-    if(pay&&payField){ const ms=donateList().map(m=>m.label).filter(Boolean); if(ms.length&&!stripeOn()){ pay.innerHTML='<option value="">Please choose…</option>'+ms.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('')+'<option value="Not sure yet">Not sure yet</option>'; payField.style.display=''; } else payField.style.display='none'; }
+    if(pay&&payField){ const ms=parkPayList().map(m=>m.label).filter(Boolean); if(ms.length&&!stripeOn()){ pay.innerHTML='<option value="">Please choose…</option>'+ms.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join(''); payField.style.display=''; } else payField.style.display='none'; }
+    const pn=document.getElementById('bk-pay-note');
+    if(pn){ const t=(CFG.park&&CFG.park.hidePayNote)?'':fillHold((CFG.park&&CFG.park.payNote)||''); pn.textContent=t; pn.style.display=(t&&t.trim())?'':'none'; }
   }
   function loadSettings(){
     if(!sbOn()) return;
@@ -813,13 +837,39 @@
     const summer = a<=b ? (md>=a&&md<=b) : (md>=a||md<=b);
     return summer ? (s.summer||{}) : (s.winter||{});
   }
+  function fillSlotOptions(){
+    const p=CFG.park||{}, seas=activeSeason();
+    const slot=document.getElementById('bk-slot'); if(!slot) return;
+    const slots=seas.slots||p.slots||[];
+    slot.innerHTML='<option value="">Choose a time…</option>'+slots.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  }
+  // Tells visitors which days we take bookings (built from Alex's tick boxes,
+  // so there is no second piece of wording to keep in sync).
+  function renderDayRules(){
+    const note=document.getElementById('bk-days-note'); if(!note) return;
+    const open=openDayKeys();
+    if(!open.length){ note.textContent='We are not taking online bookings at the moment — please contact us.'; note.style.display=''; return; }
+    if(open.length===7){ note.textContent=''; note.style.display='none'; return; }
+    note.textContent='We take bookings on '+listPhrase(open.map(k=>DAY_NAMES[k]+'s'))+'.';
+    note.style.display='';
+  }
+  function onDateChange(){
+    const warn=document.getElementById('bk-day-warn'); const v=val('bk-date');
+    if(v && !isDayOpen(v)){
+      const k=dayKeyOf(v);
+      if(warn){ warn.textContent='Sorry — we don’t take bookings on '+(DAY_NAMES[k]||'that day')+'s. Please choose another date.'; warn.style.display=''; }
+      const slot=document.getElementById('bk-slot'); if(slot) slot.innerHTML='<option value="">Choose a time…</option>';
+      return;
+    }
+    if(warn){ warn.textContent=''; warn.style.display='none'; }
+    fillSlotOptions(); loadBookedSlots();
+  }
   function renderPark(){
     const p=CFG.park||{}; const seas=activeSeason();
     const f=document.getElementById('park-features'); if(f) f.innerHTML=(p.features||[]).map(x=>`<li>${esc(x)}</li>`).join('');
     const a=document.getElementById('park-address'); if(a) a.textContent=p.address||'';
     const h=document.getElementById('park-hours'); if(h) h.textContent=seas.hours||p.hours||'';
-    const slot=document.getElementById('bk-slot'); const slots=seas.slots||p.slots||[];
-    if(slot) slot.innerHTML='<option value="">Choose a time…</option>'+slots.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    fillSlotOptions(); renderDayRules();
     const dogs=document.getElementById('bk-dogs'); const max=p.maxDogs||1;
     if(dogs){ let o=''; for(let i=1;i<=max;i++) o+=`<option value="${i}">${i} ${i===1?'dog':'dogs'}</option>`; dogs.innerHTML=o; }
     updatePrice();
@@ -890,6 +940,8 @@
     const dEl=document.getElementById('bk-date');
     if(dEl&&dEl.min&&date<dEl.min){ const hrs=(CFG.park&&CFG.park.minNoticeHours)||24; alert('Please choose a date at least '+hrs+' hours from now.'); return false; }
     if(dEl&&dEl.max&&date>dEl.max){ alert('Sorry, bookings can only be made up to '+(((CFG.park&&CFG.park.maxAdvanceDays)||365))+' days ahead.'); return false; }
+    if(!openDayKeys().length){ alert('Sorry, we are not taking online bookings at the moment — please contact us.'); return false; }
+    if(!isDayOpen(date)){ const dk=dayKeyOf(date); alert('Sorry — we don’t take bookings on '+(DAY_NAMES[dk]||'that day')+'s. Please choose another date.'); return false; }
     const total=updatePrice();
     if(stripeOn()){
       const btn=e.target.querySelector('button[type=submit]'); if(btn){ btn.disabled=true; btn.textContent='Redirecting…'; }
@@ -910,6 +962,7 @@
       .then(({status,d})=>{
         reset();
         if(status===409||(d&&d.error==='slot_taken')){ if(note) note.innerHTML='⚠️ Sorry, that time slot was just taken — please choose another.'; loadBookedSlots(); return; }
+        if(d&&d.error==='day_closed'){ if(note) note.innerHTML='⚠️ Sorry, we don’t take bookings on that day — please choose another date.'; return; }
         const ref=(d&&d.ref)||'';
         if(note) note.innerHTML=`✅ <b>Request received${ref?(' — reference '+esc(ref)):''}.</b> Your slot is held while we confirm. Final step — tap to send your details on WhatsApp:<br><a class="btn btn-primary" style="margin-top:10px" target="_blank" rel="noopener" href="https://wa.me/${num}?text=${waMsg(ref)}">Send on WhatsApp</a>`;
         loadBookedSlots();
@@ -972,7 +1025,7 @@
     const hdr=document.getElementById('hdr'); if(hdr){ const onScroll=()=>hdr.classList.toggle('scrolled',window.scrollY>20); onScroll(); window.addEventListener('scroll',onScroll,{passive:true}); }
     if(!reduce){ const paws=document.getElementById('paws'); if(paws){ for(let i=0;i<12;i++){ const s=document.createElement('span'); s.className='paw'; s.textContent='🐾'; s.style.left=Math.random()*100+'%'; s.style.bottom=(-20+Math.random()*40)+'%'; s.style.fontSize=(1+Math.random()*1.6)+'rem'; s.style.animationDuration=(7+Math.random()*8)+'s'; s.style.animationDelay=(-Math.random()*10)+'s'; paws.appendChild(s); } } }
 
-    const d=document.getElementById('bk-date'); if(d){ const days=Math.max(1,Math.ceil(((CFG.park&&CFG.park.minNoticeHours)||24)/24)); const md=new Date(); md.setDate(md.getDate()+days); d.min=md.toISOString().split('T')[0]; const mx=new Date(); mx.setDate(mx.getDate()+(((CFG.park&&CFG.park.maxAdvanceDays)||365))); d.max=mx.toISOString().split('T')[0]; d.addEventListener('change',loadBookedSlots); }
+    const d=document.getElementById('bk-date'); if(d){ const days=Math.max(1,Math.ceil(((CFG.park&&CFG.park.minNoticeHours)||24)/24)); const md=new Date(); md.setDate(md.getDate()+days); d.min=md.toISOString().split('T')[0]; const mx=new Date(); mx.setDate(mx.getDate()+(((CFG.park&&CFG.park.maxAdvanceDays)||365))); d.max=mx.toISOString().split('T')[0]; d.addEventListener('change',onDateChange); }
     bookingBanner();
     document.querySelectorAll('#nav a').forEach(a=>a.addEventListener('click',()=>document.getElementById('nav').classList.remove('open')));
   }

@@ -143,6 +143,12 @@ window.SITE_CONFIG = {
     maxAdvanceDays:  365,           // furthest ahead a visitor can book, in days
     holdHours:       2,             // how long an unconfirmed request holds its slot before auto-release
     postVisitHours:  1,             // hours after a visit to send the post-visit thank-you email
+    // Which days of the week take online bookings. Untick any day in the admin
+    // ("Days we take bookings"). Unticking every day pauses online bookings.
+    openDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: true },
+    // Small note under the booking form's "How would you like to donate?" question.
+    // {hold} fills in the hold time above. Hide it from the admin if not wanted.
+    payNote:         "Please choose an instant method so we can confirm your slot within {hold} hours.",
     // Short note shown under the price so visitors know the fee supports the rescue:
     fundsMessage:    "Every booking helps fund food and vet care for our rescue animals — thank you! 🐾",
 

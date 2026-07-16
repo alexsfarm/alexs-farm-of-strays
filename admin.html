@@ -225,6 +225,9 @@ async function loadAll(){
     if(cd.paypal)  dm.push({label:'PayPal', lines:[], code:'', url:cd.paypal});
     if(dm.length) S.donate.methods = dm;
   }
+  // Which methods are offered for park bookings. Anything never set defaults to
+  // "instant only" (i.e. bank transfers off), so the tick boxes start out right.
+  S.donate.methods.forEach(m=>{ if(m && typeof m.parkOk!=='boolean') m.parkOk = !/bank|transfer|iban|swift|cheque|cash/i.test(String(m.label||'')); });
   if(!S.socials.length){
     const sc=[];
     if(C.facebookRescue) sc.push({type:'facebook',label:'Rescue Facebook',url:C.facebookRescue});
@@ -291,6 +294,16 @@ function selectField(label, value, options, onInput){
   options.forEach(o=>{ const [val,txt] = Array.isArray(o)?o:[o,o]; const op=el('option',{value:val},[txt]); if(String(val)===String(value)) op.selected=true; s.appendChild(op); });
   s.addEventListener('change', ()=> onInput(s.value));
   const w = el('div'); if(label) w.appendChild(el('label',{},[label])); w.appendChild(s); return w;
+}
+
+function checkField(label, checked, onChange){
+  const w = el('div', {class:'full'});
+  const l = el('label', {style:'display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600'});
+  const c = el('input', {type:'checkbox'}); c.checked = !!checked;
+  c.style.width='auto'; c.style.margin='0';
+  c.addEventListener('change', ()=> onChange(c.checked));
+  l.appendChild(c); l.appendChild(el('span',{},[label]));
+  w.appendChild(l); return w;
 }
 
 /* ---------- tabs ---------- */
@@ -512,7 +525,8 @@ function renderDonate(p){
     g.appendChild(inputField('Code / number (optional, e.g. IBAN)', item.code, v=> item.code=v));
     g.appendChild(inputField('Link (optional, e.g. PayPal.me)', item.url, v=> item.url=v, {placeholder:'https://…'}));
     box.appendChild(g);
-  }, 'Add donation method', 'These tiles appear in the "Choose a way to give" section. Edit or remove any of them, or add new ones.'));
+    box.appendChild(checkField('Offer this for dog-park bookings (instant payments only)', item.parkOk!==false, v=> item.parkOk=v));
+  }, 'Add donation method', 'These tiles appear in the "Choose a way to give" section. Edit or remove any of them, or add new ones. The tick box controls the dog-park booking form only — every method here always shows in the Donations section.'));
   const cc=el('div',{class:'card'}); cc.appendChild(el('h3',{},['Card payments tile']));
   cc.appendChild(el('p',{class:'muted'},['A "Card (coming soon)" tile is shown automatically and turns into live card donations once Stripe is connected. You can hide it here if you prefer not to show it.']));
   cc.appendChild(selectField('Show the "Card" tile?', (S.donate.hideCard?'no':'yes'), [['yes','Show it'],['no','Hide it']], v=> S.donate.hideCard = (v==='no')));
@@ -567,6 +581,31 @@ function renderPark(p){
   c.appendChild(g);
   c.appendChild(inputField('"Funds the rescue" note (under the price)', k.fundsMessage||'', v=> k.fundsMessage=v, {tag:'textarea', placeholder:'Every booking helps fund food and vet care…'}));
   p.appendChild(c);
+
+  // Days of the week we take bookings
+  k.openDays = (k.openDays && typeof k.openDays==='object') ? k.openDays : {};
+  const dc=el('div',{class:'card'}); dc.appendChild(el('h3',{},['Days we take bookings']));
+  dc.appendChild(el('p',{class:'muted'},['Untick any day you don’t want online bookings on — for example, untick Monday to Friday for weekends only. The booking form automatically tells visitors which days you’re open. (You can still add a booking yourself on any day from the Bookings tab.)']));
+  const dayWarn=el('p',{class:'muted'});
+  function refreshDayWarn(){
+    const anyOpen=['mon','tue','wed','thu','fri','sat','sun'].some(x=> k.openDays[x]!==false);
+    dayWarn.textContent = anyOpen ? '' : '⚠️ No days are ticked — online bookings will be switched off until you tick at least one.';
+    dayWarn.style.color = anyOpen ? '' : '#b00020';
+    dayWarn.style.fontWeight = anyOpen ? '' : '700';
+  }
+  const dayRow=el('div',{class:'grid3'});
+  [['mon','Monday'],['tue','Tuesday'],['wed','Wednesday'],['thu','Thursday'],['fri','Friday'],['sat','Saturday'],['sun','Sunday']].forEach(([dk,nm])=>{
+    dayRow.appendChild(checkField(nm, k.openDays[dk]!==false, v=>{ k.openDays[dk]=v; refreshDayWarn(); }));
+  });
+  dc.appendChild(dayRow); dc.appendChild(dayWarn); refreshDayWarn();
+  p.appendChild(dc);
+
+  // Note under the booking form's payment question
+  const pnc=el('div',{class:'card'}); pnc.appendChild(el('h3',{},['Note under the payment question']));
+  pnc.appendChild(el('p',{class:'muted'},['Shown under “How would you like to donate?” on the booking form. Tip: type {hold} and it fills in your hold time above automatically. Set it to “Hide it” if you don’t want the note at all.']));
+  pnc.appendChild(selectField('Show this note?', (k.hidePayNote?'no':'yes'), [['yes','Show it'],['no','Hide it']], v=> k.hidePayNote=(v==='no')));
+  pnc.appendChild(inputField('Note text', k.payNote||'', v=> k.payNote=v, {tag:'textarea', placeholder:'Please choose an instant method…'}));
+  p.appendChild(pnc);
 
   // Pricing
   const pc=el('div',{class:'card'}); pc.appendChild(el('h3',{},['Price by number of dogs (€/£)']));

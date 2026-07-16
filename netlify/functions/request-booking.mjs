@@ -18,6 +18,20 @@ export default async (req) => {
   if (!date || !slot || !name || !phone || !email) return json({ error: 'Please fill in all fields.' }, 400);
 
   const H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' };
+
+  // Backstop for the admin-editable "Days we take bookings" tick boxes, so a
+  // closed day can't be booked by bypassing the form. Never blocks on error.
+  try {
+    const rs = await fetch(`${SB}/rest/v1/site_settings?id=eq.main&select=data`, { headers: H });
+    const rows = await rs.json();
+    const od = rows && rows[0] && rows[0].data && rows[0].data.park && rows[0].data.park.openDays;
+    if (od && typeof od === 'object') {
+      const KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+      const d = new Date(date + 'T12:00:00Z');
+      if (!isNaN(d.getTime()) && od[KEYS[d.getUTCDay()]] === false) return json({ error: 'day_closed' }, 400);
+    }
+  } catch {}
+
   const row = { date, slot, dogs, name, phone, email, amount, currency: 'eur', status: 'requested', payment_method: payment || null };
 
   // Send a row to park_bookings. If the optional `payment_method` column hasn't
