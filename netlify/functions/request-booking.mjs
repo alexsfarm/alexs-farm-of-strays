@@ -32,6 +32,22 @@ export default async (req) => {
     }
   } catch {}
 
+  // Overlap guard: a booked time blocks any slot that overlaps it in REAL time,
+  // not just an identical string — so bookings made under an older slot schedule
+  // still protect their hour after the times are changed in the admin. If the
+  // requested slot can't be parsed, fall through to the unique(date,slot) rule.
+  const range = s => { const m = String(s || '').match(/(\d{1,2}):(\d{2})\D+?(\d{1,2}):(\d{2})/); return m ? [(+m[1]) * 60 + (+m[2]), (+m[3]) * 60 + (+m[4])] : null; };
+  try {
+    const nr = range(slot);
+    if (nr) {
+      const ex = await fetch(`${SB}/rest/v1/park_bookings?select=slot&date=eq.${encodeURIComponent(date)}&status=in.(requested,confirmed)`, { headers: H });
+      const act = ex.ok ? await ex.json() : [];
+      if (Array.isArray(act) && act.some(b => { const br = range(b.slot); return br && nr[0] < br[1] && br[0] < nr[1]; })) {
+        return json({ error: 'slot_taken' }, 409);
+      }
+    }
+  } catch {}
+
   const row = { date, slot, dogs, name, phone, email, amount, currency: 'eur', status: 'requested', payment_method: payment || null };
 
   // Send a row to park_bookings. If the optional `payment_method` column hasn't
@@ -56,6 +72,9 @@ export default async (req) => {
     const cur = Array.isArray(rows) && rows[0];
     if (cur && cur.status === 'cancelled') {
       r = await send('PATCH', `${SB}/rest/v1/park_bookings?id=eq.${encodeURIComponent(cur.id)}`, row);
+      // Best-effort: reset the email-tracking flags left by the old booking so
+      // the new customer still gets their scheduled emails.
+      try { await fetch(`${SB}/rest/v1/park_bookings?id=eq.${encodeURIComponent(cur.id)}`, { method: 'PATCH', headers: { ...H, Prefer: 'return=minimal' }, body: JSON.stringify({ prearrival_sent: false, postvisit_sent: false }) }); } catch {}
     } else {
       return json({ error: 'slot_taken' }, 409);
     }

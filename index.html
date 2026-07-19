@@ -979,12 +979,20 @@
       .then(r=>r.ok?r.json():[]).then(rows=>{ if(Array.isArray(rows)&&rows.length) renderAnimals(rows.map(r=>({name:r.name,species:r.species,status:r.status,photo:r.photo_url,blurb:r.blurb,details:r.details}))); })
       .catch(()=>{});
   }
+  // A booked time blocks any slot that overlaps it in REAL time, not just an
+  // identical string — so bookings made under an old schedule keep protecting
+  // their hour after the slot times are changed in the admin.
+  function slotRange(s){ const m=String(s||'').match(/(\d{1,2}):(\d{2})\D+?(\d{1,2}):(\d{2})/); return m?[(+m[1])*60+(+m[2]),(+m[3])*60+(+m[4])]:null; }
+  function slotsOverlap(a,b){ const x=slotRange(a), y=slotRange(b); return !!(x&&y&&x[0]<y[1]&&y[0]<x[1]); }
+  let bkSeq=0;   // ignore out-of-order responses when the date is changed quickly
   function loadBookedSlots(){
     const date=val('bk-date'); const slot=document.getElementById('bk-slot'); if(!date||!slot) return;
     Array.from(slot.options).forEach(o=>{ if(o.value){ o.disabled=false; o.textContent=o.value; } });
     if(!sbOn()) return;
+    const seq=++bkSeq;
     fetch('/api/booked-slots?date='+encodeURIComponent(date)).then(r=>r.ok?r.json():{slots:[]}).then(d=>{
-      (d.slots||[]).forEach(t=>Array.from(slot.options).forEach(o=>{ if(o.value===t){ o.disabled=true; o.textContent=o.value+' (booked)'; } }));
+      if(seq!==bkSeq) return;   // a newer date was picked while this reply was in flight
+      (d.slots||[]).forEach(t=>Array.from(slot.options).forEach(o=>{ if(o.value&&(o.value===t||slotsOverlap(o.value,t))){ o.disabled=true; o.textContent=o.value+' (booked)'; } }));
     }).catch(()=>{});
   }
 

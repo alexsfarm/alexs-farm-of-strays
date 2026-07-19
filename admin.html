@@ -629,6 +629,7 @@ function renderPark(p){
     d.appendChild(inputField('Time slots (one per line)', (k.season[seas].slots||[]).join('\n'), v=> k.season[seas].slots=v.split('\n').map(s=>s.trim()).filter(Boolean), {tag:'textarea', placeholder:'07:30 – 08:30'}));
     sc.appendChild(d);
   });
+  sc.appendChild(el('p',{class:'muted'},['Safe to change any time: bookings already in the diary keep their original times (and their automatic emails use those original times), and they still block any new slot that overlaps them — so changing the schedule can never double-book anyone. Tip: if you change the slot times, also update the "Hours label" above so the website advertises the new hours.']));
   p.appendChild(sc);
 
   // Park photos (gallery / carousel)
@@ -760,8 +761,8 @@ function renderBookings(p){
     const box=el('div',{class:'item'});
     box.appendChild(el('div',{html:`<b>${esc(ref)}</b> &middot; <b>${esc(b.date)}</b> &middot; ${esc(b.slot)} &middot; ${esc(b.name||'')} &middot; ${esc(b.phone||'')} &middot; ${esc(b.email||'')} &middot; ${esc(b.dogs)} dog(s)${b.amount!=null?(' &middot; €'+esc(b.amount)):''}${b.payment_method?(' &middot; 💳 '+esc(b.payment_method)):''} &middot; <span class="pill">${esc(b.status)}</span>`}));
     const row=el('div',{class:'row',style:'margin-top:8px'});
-    row.appendChild(el('button',{class:'btn btn-blue btn-sm',onclick:async()=>{ await api('update-booking',{id:b.id,booking:{status:'confirmed'}}); b.status='confirmed'; render(); }},['Mark confirmed']));
-    row.appendChild(el('button',{class:'btn btn-light btn-sm',onclick:async()=>{ await api('update-booking',{id:b.id,booking:{status:'cancelled'}}); b.status='cancelled'; render(); }},['Mark cancelled']));
+    row.appendChild(el('button',{class:'btn btn-blue btn-sm',onclick:async()=>{ try{ await api('update-booking',{id:b.id,booking:{status:'confirmed'}}); b.status='confirmed'; render(); toast('Booking confirmed ✓'); }catch(e){ toast('Could not confirm: '+(e.message||'unknown'), true); } }},['Mark confirmed']));
+    row.appendChild(el('button',{class:'btn btn-light btn-sm',onclick:async()=>{ try{ await api('update-booking',{id:b.id,booking:{status:'cancelled'}}); b.status='cancelled'; render(); toast('Booking cancelled'); }catch(e){ toast('Could not update: '+(e.message||'unknown'), true); } }},['Mark cancelled']));
     row.appendChild(el('button',{class:'btn btn-danger',style:'margin-left:auto',onclick:async()=>{ if(confirm('Delete this booking and free the slot?')){ await api('delete-booking',{id:b.id}); B=await api('list-bookings'); render(); } }},['Delete (free slot)']));
     box.appendChild(row); c.appendChild(box);
   });

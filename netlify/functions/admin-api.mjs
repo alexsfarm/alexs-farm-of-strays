@@ -98,6 +98,22 @@ export default async (req) => {
       return json(await r.json());
     }
     if (action === 'update-booking') {
+      // Re-activation guard: bringing a CANCELLED booking back to life must not
+      // double-book a time that has since been taken (e.g. by a booking made
+      // under a newer slot schedule). Active rows were already checked on entry.
+      const patch = body.booking || {};
+      if (patch.status === 'confirmed' || patch.status === 'requested') {
+        try {
+          const cr = await fetch(`${SB}/rest/v1/park_bookings?id=eq.${encodeURIComponent(body.id)}&select=date,slot,status`, { headers: H });
+          const cur = cr.ok ? (await cr.json())[0] : null;
+          if (cur && cur.status === 'cancelled') {
+            const ex = await fetch(`${SB}/rest/v1/park_bookings?select=slot&date=eq.${encodeURIComponent(cur.date)}&id=neq.${encodeURIComponent(body.id)}&status=in.(requested,confirmed)`, { headers: H });
+            const act = ex.ok ? await ex.json() : [];
+            const clash = Array.isArray(act) && act.find(x => slotsClash(cur.slot, x.slot));
+            if (clash) return json({ error: 'Cannot restore this booking: its time now overlaps another booking (' + clash.slot + ') on that date.' }, 409);
+          }
+        } catch {}
+      }
       const r = await fetch(`${SB}/rest/v1/park_bookings?id=eq.${encodeURIComponent(body.id)}`, {
         method: 'PATCH', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(body.booking || {})
       });
@@ -123,16 +139,44 @@ export default async (req) => {
         amount: (b.amount != null && b.amount !== '') ? Number(b.amount) : null,
         currency: 'eur', status: b.status || 'confirmed', payment_method: b.payment || null
       };
-      const ins = async (rw) => {
-        let res = await fetch(`${SB}/rest/v1/park_bookings`, { method: 'POST', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(rw) });
+      // Overlap guard: block times that clash with an existing active booking in
+      // REAL time (not just identical text), so bookings made under an older
+      // slot schedule still protect their hour after the times are changed.
+      try {
+        if (slotMinutes(row.slot)) {
+          const ex = await fetch(`${SB}/rest/v1/park_bookings?select=slot&date=eq.${encodeURIComponent(row.date)}&status=in.(requested,confirmed)`, { headers: H });
+          const act = ex.ok ? await ex.json() : [];
+          const clash = Array.isArray(act) && act.find(x => slotsClash(row.slot, x.slot));
+          if (clash) return json({ error: 'That time overlaps an existing booking (' + clash.slot + ') on that date.' }, 409);
+        }
+      } catch {}
+      // Insert, transparently retrying without the optional payment_method
+      // column if it hasn't been added to the database yet.
+      const send = async (method, url, rw) => {
+        let res = await fetch(url, { method, headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(rw) });
         if (!res.ok && res.status !== 409 && rw.payment_method !== undefined) {
           const t = await res.clone().text();
-          if (/payment_method/i.test(t)) { const b2 = { ...rw }; delete b2.payment_method; res = await fetch(`${SB}/rest/v1/park_bookings`, { method: 'POST', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(b2) }); }
+          if (/payment_method/i.test(t)) { const b2 = { ...rw }; delete b2.payment_method; res = await fetch(url, { method, headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify(b2) }); }
         }
         return res;
       };
-      const r = await ins(row);
-      if (r.status === 409) return json({ error: 'That date and time slot is already booked.' }, 409);
+      let r = await send('POST', `${SB}/rest/v1/park_bookings`, row);
+      if (r.status === 409) {
+        // The exact slot text already has a row. If that row is CANCELLED the
+        // slot is genuinely free — re-use the row, same as the public booking
+        // path does. Otherwise the slot really is taken.
+        const exq = await fetch(`${SB}/rest/v1/park_bookings?select=id,status&date=eq.${encodeURIComponent(row.date)}&slot=eq.${encodeURIComponent(row.slot)}`, { headers: H });
+        const exr = exq.ok ? await exq.json() : [];
+        const cur = Array.isArray(exr) && exr[0];
+        if (cur && cur.status === 'cancelled') {
+          r = await send('PATCH', `${SB}/rest/v1/park_bookings?id=eq.${encodeURIComponent(cur.id)}`, row);
+          // Best-effort: reset the email-tracking flags left by the old booking
+          // so the new customer still gets their scheduled emails.
+          try { await fetch(`${SB}/rest/v1/park_bookings?id=eq.${encodeURIComponent(cur.id)}`, { method: 'PATCH', headers: { ...H, Prefer: 'return=minimal' }, body: JSON.stringify({ prearrival_sent: false, postvisit_sent: false }) }); } catch {}
+        } else {
+          return json({ error: 'That date and time slot is already booked.' }, 409);
+        }
+      }
       if (!r.ok) return json({ error: 'Could not create the booking: ' + (await r.text()) }, 500);
       if (b.sendEmail && row.email && row.status === 'confirmed') {
         await sendBookingEmail(SB, H, row.email, 'confirmed', { name: row.name, date: row.date, time: row.slot, dogs: row.dogs });
@@ -151,6 +195,11 @@ export const config = { path: '/api/admin' };
 function json(o, s = 200) {
   return new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json' } });
 }
+
+// "HH:MM – HH:MM" -> [startMinutes, endMinutes], or null if unparseable.
+function slotMinutes(s) { const m = String(s || '').match(/(\d{1,2}):(\d{2})\D+?(\d{1,2}):(\d{2})/); return m ? [(+m[1]) * 60 + (+m[2]), (+m[3]) * 60 + (+m[4])] : null; }
+// True when two slots overlap in REAL time (touching edges don't count).
+function slotsClash(a, b) { const x = slotMinutes(a), y = slotMinutes(b); return !!(x && y && x[0] < y[1] && y[0] < x[1]); }
 
 // Send a booking email via Resend, using the (admin-editable) template stored in
 // site_settings, with a built-in fallback. Stays dormant until RESEND_API_KEY is set.
